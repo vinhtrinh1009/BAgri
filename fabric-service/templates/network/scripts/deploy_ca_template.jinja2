@@ -1,0 +1,26 @@
+MIN_SLEEP=5
+MAX_SLEEP=20
+
+kubectl --kubeconfig={{data['kube_config_path']}} apply -f {{data['network_folder']}}/k8s/orderer/ca-deployment.yaml
+sleep $MIN_SLEEP
+
+kubectl --kubeconfig={{data['kube_config_path']}} apply -f {{data['network_folder']}}/k8s/orderer/ca-service.yaml
+sleep $MIN_SLEEP
+
+# kubectl --kubeconfig={{data['kube_config_path']}} apply -f {{data['network_folder']}}/k8s/orderer/ca-ingress.yaml
+# sleep $MIN_SLEEP
+
+{% for org in data['orgs']%}
+
+kubectl --kubeconfig={{data['kube_config_path']}} apply -f {{data['network_folder']}}/k8s/{{org['name']}}/ca-deployment.yaml
+sleep $MIN_SLEEP
+
+kubectl --kubeconfig={{data['kube_config_path']}} apply -f {{data['network_folder']}}/k8s/{{org['name']}}/ca-service.yaml
+sleep $MIN_SLEEP
+
+# kubectl --kubeconfig={{data['kube_config_path']}} apply -f {{data['network_folder']}}/k8s/{{org['name']}}/ca-ingress.yaml
+# sleep $MIN_SLEEP
+
+{% endfor %}
+
+sleep $MAX_SLEEP

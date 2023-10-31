@@ -1,0 +1,198 @@
+source /fabric/dapps/{{data['dapp_name']}}/scripts/script_utils.sh
+
+MIN_SLEEP=3
+MAX_SLEEP=10
+
+export CC_SEQUENCE="{{data['chaincode_version']}}"
+export FABRIC_CFG_PATH="/etc/hyperledger/fabric"
+export MAX_RETRY=5
+export DELAY=5
+export ORDERER_CA="/fabric/crypto-config/ordererOrganizations/{{data['network_name']}}.com/orderers/orderer.{{data['network_name']}}.com/msp/tlscacerts/tlsca.{{data['network_name']}}.com-cert.pem"
+export CHANNEL_NAME="{{data['network_name']}}-appchannel"
+export CC_NAME="{{data['dapp_name']}}"
+export CC_VERSION="{{data['chaincode_version']}}"
+export CC_SRC_PATH="/fabric/dapps/{{data['dapp_name']}}/chaincode"
+export CC_RUNTIME_LANGUAGE="golang"
+
+export CORE_PEER_TLS_ENABLED=true
+export ORDERER_URL="{{data['nodeIp']}}:{{calOrdererNodePort()}}"
+export CORE_PEER_ADDRESSAUTODETECT="false"
+export CORE_PEER_NETWORKID="nid1"
+export CHANNEL_NAME="{{data['network_name']}}-appchannel"
+export FABRIC_CFG_PATH="/etc/hyperledger/fabric"
+
+
+pushd $CC_SRC_PATH
+GO111MODULE=on go mod vendor
+popd
+
+verifyResult() {
+  if [ $1 -ne 0 ]; then
+    fatalln "$2"
+  fi
+}
+
+packageChaincode() {
+  set -x
+  peer lifecycle chaincode package "/fabric/dapps/{{data['dapp_name']}}/chaincode/${CC_NAME}.tar.gz" --path ${CC_SRC_PATH} --lang ${CC_RUNTIME_LANGUAGE} --label ${CC_NAME}_${CC_VERSION} >&log.txt
+  res=$?
+  { set +x; } 2>/dev/null
+  cat log.txt
+  verifyResult $res "Chaincode packaging has failed"
+    successln "Chaincode is packaged"
+}
+
+# installChaincode PEER ORG
+installChaincode() {
+  PEER_NAME=$1
+  set -x
+  peer lifecycle chaincode install "/fabric/dapps/{{data['dapp_name']}}/chaincode/${CC_NAME}.tar.gz" >&log.txt
+  res=$?
+  { set +x; } 2>/dev/null
+  cat log.txt
+  verifyResult $res "Chaincode installation on ${PEER_NAME} has failed"
+  successln "Chaincode is installed on ${PEER_NAME}"
+}
+
+# queryInstalled PEER ORG
+queryInstalled() {
+  PEER_NAME=$1
+  set -x
+  peer lifecycle chaincode queryinstalled >&log.txt
+  res=$?
+  { set +x; } 2>/dev/null
+  cat log.txt
+  TEMP=$(sed -n "/${CC_NAME}_${CC_VERSION}/{s/^Package ID: //; s/, Label:.*$//; p;}" log.txt)
+  if [ ! -z "$TEMP" ]; then
+    PACKAGE_ID=$TEMP
+  fi
+  verifyResult $res "Query installed on ${PEER_NAME} has failed"
+  successln "Query installed ${PACKAGE_ID} successful on ${PEER_NAME} on channel"
+}
+
+# approveForMyOrg VERSION PEER ORG
+approveForMyOrg() {
+  PEER_NAME=$1
+  set -x
+  peer lifecycle chaincode approveformyorg -o {{data['nodeIp']}}:{{calOrdererNodePort()}} --ordererTLSHostnameOverride orderer.{{data['network_name']}}.com --tls --cafile $ORDERER_CA --channelID $CHANNEL_NAME --name ${CC_NAME} --version ${CC_VERSION} --package-id ${PACKAGE_ID} --sequence ${CC_VERSION} >&log.txt
+  res=$?
+  { set +x; } 2>/dev/null
+  cat log.txt
+  verifyResult $res "Chaincode definition approved on ${PEER_NAME} on channel '$CHANNEL_NAME' failed"
+  successln "Chaincode definition approved on ${PEER_NAME} on channel '$CHANNEL_NAME'"
+}
+
+
+# commitChaincodeDefinition VERSION PEER ORG (PEER ORG)...
+commitChaincodeDefinition() {
+  # while 'peer chaincode' command can get the orderer endpoint from the
+  # peer (if join was successful), let's supply it directly as we know
+  # it using the "-o" option
+  PEER_NAME=$1
+  set -x
+  peer lifecycle chaincode commit -o {{data['nodeIp']}}:{{calOrdererNodePort()}} --ordererTLSHostnameOverride orderer.{{data['network_name']}}.com --tls --cafile $ORDERER_CA --channelID $CHANNEL_NAME --name ${CC_NAME} {% for org in data['orgs'] %} {% set org_index = loop.index - 1 %}  --peerAddresses "{{data['nodeIp']}}:{{calPeerNodePort(org_index, 0)}}"  --tlsRootCertFiles "/fabric/crypto-config/peerOrganizations/{{org['name']}}.{{data['network_name']}}.com/peers/peer0.{{org['name']}}.{{data['network_name']}}.com/tls/ca.crt" {% endfor %} --version ${CC_VERSION} --sequence ${CC_VERSION} >&log.txt
+  res=$?
+  { set +x; } 2>/dev/null
+  cat log.txt
+  verifyResult $res "Chaincode definition commit failed on ${PEER_NAME} on channel '$CHANNEL_NAME' failed"
+  successln "Chaincode definition committed on channel '$CHANNEL_NAME'"
+}
+
+# queryCommitted ORG
+queryCommitted() {
+  PEER_NAME=$1
+  EXPECTED_RESULT="Version: ${CC_VERSION}, Sequence: ${CC_VERSION}, Endorsement Plugin: escc, Validation Plugin: vscc"
+  infoln "Querying chaincode definition on ${PEER_NAME} on channel '$CHANNEL_NAME'..."
+  local rc=1
+  local COUNTER=1
+  # continue to poll
+  # we either get a successful response, or reach MAX RETRY
+  while [ $rc -ne 0 -a $COUNTER -lt $MAX_RETRY ]; do
+    sleep $DELAY
+    infoln "Attempting to Query committed status on ${PEER_NAME}, Retry after $DELAY seconds."
+    set -x
+    peer lifecycle chaincode querycommitted --channelID $CHANNEL_NAME --name ${CC_NAME} >&log.txt
+    res=$?
+    { set +x; } 2>/dev/null
+    test $res -eq 0 && VALUE=$(cat log.txt | grep -o '^Version: '$CC_VERSION', Sequence: [0-9]*, Endorsement Plugin: escc, Validation Plugin: vscc')
+    test "$VALUE" = "$EXPECTED_RESULT" && let rc=0
+    COUNTER=$(expr $COUNTER + 1)
+  done
+  cat log.txt
+  if test $rc -eq 0; then
+    successln "Query chaincode definition successful on ${PEER_NAME} on channel '$CHANNEL_NAME'"
+  else
+    fatalln "After $MAX_RETRY attempts, Query chaincode definition result on ${PEER_NAME} is INVALID!"
+  fi
+}
+
+chaincodeInvokeInit() {
+  # while 'peer chaincode' command can get the orderer endpoint from the
+  # peer (if join was successful), let's supply it directly as we know
+  # it using the "-o" option
+  set -x
+  fcn_call='{"function":"'${CC_INIT_FCN}'","Args":[]}'
+  infoln "invoke fcn call:${fcn_call}"
+  peer chaincode invoke -o {{data['nodeIp']}}:{{calOrdererNodePort()}} --ordererTLSHostnameOverride orderer.{{data['network_name']}}.com --tls --cafile $ORDERER_CA -C $CHANNEL_NAME -n ${CC_NAME} $PEER_CONN_PARMS --isInit -c ${fcn_call} >&log.txt
+  res=$?
+  { set +x; } 2>/dev/null
+  cat log.txt
+  verifyResult $res "Invoke execution on $PEERS failed "
+  successln "Invoke transaction successful on $PEERS on channel '$CHANNEL_NAME'"
+}
+
+## package the chaincode
+packageChaincode
+
+{% for org in data['orgs'] %}
+{% set org_index = loop.index - 1 %}
+export CORE_PEER_LOCALMSPID="{{org['name']|capitalize}}MSP"
+export CORE_PEER_MSPCONFIGPATH="/fabric/crypto-config/peerOrganizations/{{org['name']}}.{{data['network_name']}}.com/users/Admin@{{org['name']}}.{{data['network_name']}}.com/msp"
+export CORE_PEER_ADDRESS="{{data['nodeIp']}}:{{calPeerNodePort(org_index, 0)}}"
+export CORE_PEER_TLS_ROOTCERT_FILE="/fabric/crypto-config/peerOrganizations/{{org['name']}}.{{data['network_name']}}.com/peers/peer0.{{org['name']}}.{{data['network_name']}}.com/tls/ca.crt"
+infoln "Installing chaincode on peer0.{{org['name']}}.{{data['network_name']}}.com..."
+installChaincode peer0-{{org['name']}}
+{% endfor %}
+
+sleep $MAX_SLEEP
+
+## query whether the chaincode is installed
+{% for org in data['orgs'] %}
+{% set org_index = loop.index - 1 %}
+export CORE_PEER_LOCALMSPID="{{org['name']|capitalize}}MSP"
+export CORE_PEER_MSPCONFIGPATH="/fabric/crypto-config/peerOrganizations/{{org['name']}}.{{data['network_name']}}.com/users/Admin@{{org['name']}}.{{data['network_name']}}.com/msp"
+export CORE_PEER_ADDRESS="{{data['nodeIp']}}:{{calPeerNodePort(org_index, 0)}}"
+export CORE_PEER_TLS_ROOTCERT_FILE="/fabric/crypto-config/peerOrganizations/{{org['name']}}.{{data['network_name']}}.com/peers/peer0.{{org['name']}}.{{data['network_name']}}.com/tls/ca.crt"
+queryInstalled peer0-{{org['name']}}
+{% endfor %}
+
+{% for org in data['orgs'] %}
+{% set org_index = loop.index - 1 %}
+## approve the definition for {{org['name']}}
+export CORE_PEER_LOCALMSPID="{{org['name']|capitalize}}MSP"
+export CORE_PEER_MSPCONFIGPATH="/fabric/crypto-config/peerOrganizations/{{org['name']}}.{{data['network_name']}}.com/users/Admin@{{org['name']}}.{{data['network_name']}}.com/msp"
+export CORE_PEER_TLS_ROOTCERT_FILE="/fabric/crypto-config/peerOrganizations/{{org['name']}}.{{data['network_name']}}.com/peers/peer0.{{org['name']}}.{{data['network_name']}}.com/tls/ca.crt"
+export CORE_PEER_ADDRESS="{{data['nodeIp']}}:{{calPeerNodePort(org_index, 0)}}"
+approveForMyOrg peer0-{{org['name']}}
+{% endfor %}
+
+## now that we know for sure both orgs have approved, commit the definition
+
+
+export CORE_PEER_LOCALMSPID="{{data['orgs'][0]['name']|capitalize}}MSP"
+export CORE_PEER_MSPCONFIGPATH="/fabric/crypto-config/peerOrganizations/{{data['orgs'][0]['name']}}.{{data['network_name']}}.com/users/Admin@{{data['orgs'][0]['name']}}.{{data['network_name']}}.com/msp"
+export CORE_PEER_TLS_ROOTCERT_FILE="/fabric/crypto-config/peerOrganizations/{{data['orgs'][0]['name']}}.{{data['network_name']}}.com/peers/peer0.{{data['orgs'][0]['name']}}.{{data['network_name']}}.com/tls/ca.crt"
+export CORE_PEER_ADDRESS="{{data['nodeIp']}}:{{calPeerNodePort(0, 0)}}"
+commitChaincodeDefinition peer0-{{data['orgs'][0]['name']}}
+
+
+{% for org in data['orgs'] %}
+{% set org_index = loop.index - 1 %}
+export CORE_PEER_LOCALMSPID="{{org['name']|capitalize}}MSP"
+export CORE_PEER_MSPCONFIGPATH="/fabric/crypto-config/peerOrganizations/{{org['name']}}.{{data['network_name']}}.com/users/Admin@{{org['name']}}.{{data['network_name']}}.com/msp"
+export CORE_PEER_TLS_ROOTCERT_FILE="/fabric/crypto-config/peerOrganizations/{{org['name']}}.{{data['network_name']}}.com/peers/peer0.{{org['name']}}.{{data['network_name']}}.com/tls/ca.crt"
+export CORE_PEER_ADDRESS="{{data['nodeIp']}}:{{calPeerNodePort(org_index, 0)}}"
+queryCommitted peer0-{{org['name']}}
+{% endfor %}
+
+

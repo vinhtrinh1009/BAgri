@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orderer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: orderer
+  template:
+    metadata:
+      labels:
+        app: orderer
+    spec:
+      volumes:
+        - name: fabric-files
+          persistentVolumeClaim:
+            claimName: fabric-pvc
+      containers:
+        - name: orderer
+          image: hyperledger/fabric-orderer:2.2
+          imagePullPolicy: IfNotPresent
+          command: ['sh', '-c', 'orderer']
+          env:
+            - name: TZ
+              value: 'America/Sao_Paulo'
+            - name: ORDERER_GENERAL_LISTENADDRESS
+              value: 0.0.0.0
+            - name: ORDERER_GENERAL_LISTENPORT
+              value: "7050"
+            - name: ORDERER_GENERAL_GENESISMETHOD
+              value: file
+            - name: ORDERER_GENERAL_GENESISFILE
+              value: /fabric/configtxgen/genesis.block
+            - name: ORDERER_GENERAL_LOCALMSPID
+              value: OrdererMSP
+            - name: ORDERER_GENERAL_LOCALMSPDIR
+              value: /fabric/crypto-config/ordererOrganizations/{{data['network_name']}}.com/orderers/orderer.{{data['network_name']}}.com/msp
+            # enabled TLS
+            - name: ORDERER_GENERAL_TLS_ENABLED
+              value: "true"
+            - name: ORDERER_GENERAL_TLS_PRIVATEKEY
+              value: /fabric/crypto-config/ordererOrganizations/{{data['network_name']}}.com/orderers/orderer.{{data['network_name']}}.com/tls/server.key
+            - name: ORDERER_GENERAL_TLS_CERTIFICATE
+              value: /fabric/crypto-config/ordererOrganizations/{{data['network_name']}}.com/orderers/orderer.{{data['network_name']}}.com/tls/server.crt
+            - name: ORDERER_GENERAL_TLS_ROOTCAS
+              value: /fabric/crypto-config/ordererOrganizations/{{data['network_name']}}.com/orderers/orderer.{{data['network_name']}}.com/tls/ca.crt
+            - name: ORDERER_KAFKA_TOPIC_REPLICATIONFACTOR
+              value: "1"
+            - name: ORDERER_KAFKA_VERBOSE
+              value: "true"
+            - name: GODEBUG
+              value: 'netdns=go'
+            - name: ORDERER_GENERAL_CLUSTER_CLIENTCERTIFICATE
+              value: /fabric/crypto-config/ordererOrganizations/{{data['network_name']}}.com/orderers/orderer.{{data['network_name']}}.com/tls/server.crt
+            - name: ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY
+              value: /fabric/crypto-config/ordererOrganizations/{{data['network_name']}}.com/orderers/orderer.{{data['network_name']}}.com/tls/server.key
+            - name: ORDERER_GENERAL_CLUSTER_ROOTCAS
+              value: /fabric/crypto-config/ordererOrganizations/{{data['network_name']}}.com/orderers/orderer.{{data['network_name']}}.com/tls/ca.crt
+          volumeMounts:
+            - mountPath: /fabric/configtxgen
+              name: fabric-files
+              subPath: configtxgen
+            - mountPath: /fabric/crypto-config/ordererOrganizations/{{data['network_name']}}.com/orderers/orderer.{{data['network_name']}}.com
+              name: fabric-files
+              subPath: crypto-config/ordererOrganizations/{{data['network_name']}}.com/orderers/orderer.{{data['network_name']}}.com
+            - mountPath: /var/hyperledger
+              name: fabric-files
+              subPath: ordererData/orderer

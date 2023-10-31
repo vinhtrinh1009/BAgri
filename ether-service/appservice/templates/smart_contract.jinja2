@@ -1,0 +1,51 @@
+pragma experimental ABIEncoderV2;
+
+pragma solidity >=0.4.22 <=0.8.3;
+
+contract {{data.basic_info.dapp_name | capitalize}} {
+    {%for _entity in data.entities%}
+
+    struct {{_entity.name}}{
+        {%for _attribute in _entity.attributes%}
+        {{_attribute.type}} {{_attribute.name}};
+        {%endfor%}
+        {%for _relationship in _entity.relationship%}
+        {%if _relationship.relationship_type == '1:1'%}
+        {{_relationship._reference_entity_primary_type}} {{_relationship.referenced_entity}};
+        {% else %}
+        {{_relationship._reference_entity_primary_type}}[] {{_relationship.referenced_entity}}s;
+        {%endif%}
+        {%endfor%}
+    }
+    mapping({{_entity.primary_key_type}} => {{_entity.name}}) {{_entity.name}}s;
+    {%endfor%}
+
+    {%for _entity in data.entities%}
+    {%for _function in _entity.functions%}
+    {%if _function.type != 'GET'%}
+    function {{_function.name}}({%for _param in _function.params%}{{_param.type}}{%if _param.type == 'string'%} memory {%endif%}{{_param.name}}{{ ", " if not loop.last }}{%endfor%}
+        {%for _relationship in _entity.relationship%}, {{_relationship._reference_entity_primary_type}} {%if _relationship._reference_entity_primary_type == 'string'%}memory{%endif%} {{_relationship._reference_entity_primary_key}}{%endfor%}) public {
+        {{_entity.name}} storage _{{_entity.name}} = {{_entity.name}}s[{{_entity.primary_key}}];
+        {%for _attribute in _function.params%}
+        _{{_entity.name}}.{{_attribute.name}} = {{_attribute.name}};
+        {%endfor%}
+        {%if _entity.relationship != None%}
+        {%for _relationship in _entity.relationship%}
+        {%if _relationship.relationship_type == '1:n'%}
+        _{{_entity.name}}.{{_relationship.referenced_entity}}s.push({{_relationship._reference_entity_primary_key}});
+        {% else %}
+        _{{_entity.name}}.{{_relationship.referenced_entity}} = {{_relationship._reference_entity_primary_key}};
+        {%endif%}
+        {%endfor%}
+        {%endif%}
+    }
+    {% else %}
+    function {{_function.name}}(
+        {{_entity.primary_key_type}}{%if _entity.primary_key_type == 'string'%} memory {%endif%}{{_entity.primary_key}}) public view returns({%for _attribute in _entity.attributes%}{%if _attribute.name != _entity.primary_key%}{{_attribute.type}}{%if _attribute.type == 'string'%} memory {%endif%}{{_attribute.name}}{{ ", " if not loop.last }}{%endif%}{%endfor%}{%for _relationship in _entity.relationship%}{%if _relationship.relationship_type == '1:1'%}, {{_relationship._reference_entity_primary_type}} {%if _relationship._reference_entity_primary_type == 'string'%}memory{%endif%} {{_entity.name}}_{{_relationship.referenced_entity}}{% else %}, {{_relationship._reference_entity_primary_type}}[] {%if _relationship._reference_entity_primary_type == 'string'%}memory{%endif%} {{_entity.name}}_{{_relationship.referenced_entity}}s{%endif%}{%endfor%}){
+        {{_entity.name}} storage _{{_entity.name}} = {{_entity.name}}s[{{_entity.primary_key}}];
+        return ({%for _attribute in _entity.attributes%}{%if _attribute.name != _entity.primary_key%}_{{_entity.name}}.{{_attribute.name}}{{ ", " if not loop.last }}{%endif%}{%endfor%}{%for _relationship in _entity.relationship%}{%if _relationship.relationship_type == '1:1'%}, _{{_entity.name}}.{{_relationship.referenced_entity}}{% else %}, _{{_entity.name}}.{{_relationship.referenced_entity}}s{%endif%}{%endfor%});
+    }
+    {%endif%}
+    {%endfor%}
+    {%endfor%}
+}

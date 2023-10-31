@@ -1,0 +1,38 @@
+version: '3.2'
+
+services:
+  appservice:
+    image: fabric-driver
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fabric-appservice
+    environment:
+      # use in code
+      - CONFIG_FILE=product.yaml
+    restart: always
+    volumes:
+      - .:/fabric_appservice
+      - "nfsmountCC:/fabric_appservice/projects"
+    command: bash -c "cd fabric_appservice && python3 main.py"
+    # command: make dev
+
+  celery_worker:
+    image: fabric-driver
+    container_name: celery_worker_fabric
+    environment:
+      # use in code
+      - CONFIG_FILE=product.yaml
+    restart: always
+    volumes:
+      - .:/fabric_appservice
+      - "nfsmountCC:/fabric_appservice/projects"
+    command: bash -c "cd fabric_appservice && celery -A celery_worker worker -l info"
+
+volumes:
+  nfsmountCC:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: addr=localhost
+      device: ":/var/nfs/"

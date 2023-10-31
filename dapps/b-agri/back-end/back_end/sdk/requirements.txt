@@ -1,0 +1,5 @@
+base64
+hashlib
+pycrypto==2.6.1
+requests
+web3==5.28.0

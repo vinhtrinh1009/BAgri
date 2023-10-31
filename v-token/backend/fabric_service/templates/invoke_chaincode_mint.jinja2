@@ -1,0 +1,32 @@
+export FABRIC_CFG_PATH="{{data['cfg_folder']}}"
+export MAX_RETRY=5
+export DELAY=5
+export ORDERER_CA="/{{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['network_name']}}.com/orderers/orderer.{{data['network_name']}}.com/msp/tlscacerts/tlsca.{{data['network_name']}}.com-cert.pem"
+export CHANNEL_NAME="{{data['network_name']}}-appchannel"
+export CC_NAME="{{data['token_name']}}"
+export CC_RUNTIME_LANGUAGE="golang"
+
+export CORE_PEER_TLS_ENABLED=true
+export ORDERER_URL="{{data['nodeIp']}}:{{calOrdererNodePort()}}"
+export CORE_PEER_ADDRESSAUTODETECT="false"
+export CORE_PEER_NETWORKID="nid1"
+export CHANNEL_NAME="{{data['network_name']}}-appchannel"
+export FABRIC_CFG_PATH="{{data['cfg_folder']}}"
+
+chaincodeInvoke() {
+  # while 'peer chaincode' command can get the orderer endpoint from the
+  # peer (if join was successful), let's supply it directly as we know
+  # it using the "-o" option
+  set -x
+  fcn_call='{"Args":["Mint", "{{data['quantity']}}"]}'
+  peer chaincode invoke -o {{data['nodeIp']}}:{{calOrdererNodePort()}} --ordererTLSHostnameOverride orderer.{{data['network_name']}}.com --tls --cafile $ORDERER_CA -C $CHANNEL_NAME -n ${CC_NAME} {% for org in data['orgs'] %} {% set org_index = loop.index - 1 %}  --peerAddresses "{{data['nodeIp']}}:{{calPeerNodePort(org_index, 0)}}"  --tlsRootCertFiles "/{{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['network_name']}}.com/peers/peer0.{{org['name']}}.{{data['network_name']}}.com/tls/ca.crt" {% endfor %} -c '{"Args":["Mint", "{{data['minter_org']|capitalize}}MSP,fabric-ca-server,{{data['minter_username']}}", "{{data['quantity']}}"]}' >&log.txt
+  res=$?
+  { set +x; } 2>/dev/null
+  cat log.txt
+}
+
+export CORE_PEER_LOCALMSPID="{{data['orgs'][0]['name']|capitalize}}MSP"
+export CORE_PEER_MSPCONFIGPATH="/{{data['network_folder']}}/crypto-config/peerOrganizations/{{data['orgs'][0]['name']}}.{{data['network_name']}}.com/users/Admin@{{data['orgs'][0]['name']}}.{{data['network_name']}}.com/msp"
+export CORE_PEER_TLS_ROOTCERT_FILE="/{{data['network_folder']}}/crypto-config/peerOrganizations/{{data['orgs'][0]['name']}}.{{data['network_name']}}.com/peers/peer0.{{data['orgs'][0]['name']}}.{{data['network_name']}}.com/tls/ca.crt"
+export CORE_PEER_ADDRESS="{{data['nodeIp']}}:{{calPeerNodePort(0, 0)}}"
+chaincodeInvoke peer0-{{data['orgs'][0]['name']}}

@@ -1,0 +1,75 @@
+version: "2.2"
+
+networks:
+  test:
+
+services:
+  couchdb0:
+    container_name: couchdb0
+    image: hyperledger/fabric-couchdb:0.4.15
+    environment:
+      - COUCHDB_USER=
+      - COUCHDB_PASSWORD=
+    ports:
+      - 5984:5984
+    volumes:
+      - ./peer-data/coudb:/opt/couchdb/data/
+    networks:
+      - test
+  
+  peer{{data['peer_index']}}.{{data['org_name']}}.{{data['network_name']}}.com:
+    container_name: peer{{data['peer_index']}}.{{data['org_name']}}.{{data['network_name']}}.com
+    image: hyperledger/fabric-peer:2.2
+    command: peer node start
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    environment:
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_LOGGING_LEVEL=INFO
+      - CORE_PEER_GOSSIP_USELEADERELECTION=true
+      - CORE_PEER_GOSSIP_ORGLEADER=false
+      - CORE_PEER_GOSSIP_SKIPHANDSHAKE=true
+      - FABRIC_LOGGING_SPEC=info
+      - ORDERER_GENERAL_LOGLEVEL=info
+      - CORE_PEER_LOCALMSPID={{data['org_name']|capitalize}}MSP
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=artifacts_test
+      - CORE_PEER_ID=peer{{data['peer_index']}}
+      - CORE_PEER_ADDRESS={{data['peer_host']}}:7051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:7051
+      - CORE_PEER_CHAINCODEADDRESS=peer{{data['peer_index']}}.{{data['org_name']}}.{{data['network_name']}}.com:7052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
+      # Peer used to bootstrap gossip within organisation
+      - CORE_PEER_GOSSIP_BOOTSTRAP={{data['peer_host']}}:7051
+      # Exposed for discovery Service
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT={{data['peer_host']}}:7051
+      # - CORE_OPERATIONS_LISTENADDRESS=0.0.0.0:9440
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb0:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=
+      - CORE_METRICS_PROVIDER=prometheus
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/crypto/peer/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/crypto/peer/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/crypto/peer/tls/ca.crt
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/crypto/peer/msp
+    depends_on:
+      - couchdb0
+    ports:
+      - {{data['peer_port']}}:7051
+    volumes:
+      - ./crypto-config/peerOrganizations/{{data['org_name']}}.{{data['network_name']}}.com/peers/peer{{data['peer_index']}}.{{data['org_name']}}.{{data['network_name']}}.com/msp:/etc/hyperledger/crypto/peer/msp
+      - ./crypto-config/peerOrganizations/{{data['org_name']}}.{{data['network_name']}}.com/peers/peer{{data['peer_index']}}.{{data['org_name']}}.{{data['network_name']}}.com/tls:/etc/hyperledger/crypto/peer/tls
+      - ./peer-data/peer:/var/hyperledger
+      - /var/run/:/host/var/run/
+    networks:
+      - test
+
+  cli:
+    container_name: cli
+    image: hyperledger/fabric-tools:2.2
+    command: sh /fabric/scripts/join_channel.sh
+    volumes:
+      - ./crypto-config:/fabric/crypto-config
+      - ./scripts:/fabric/scripts
+    depends_on:
+      - peer{{data['peer_index']}}.{{data['org_name']}}.{{data['network_name']}}.com

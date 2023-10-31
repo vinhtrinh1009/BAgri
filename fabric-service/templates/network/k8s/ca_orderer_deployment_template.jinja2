@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ca-orderer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ca-orderer
+  template:
+    metadata:
+      labels:
+        app: ca-orderer
+    spec:
+      volumes:
+        - name: fabric-files
+          persistentVolumeClaim:
+            claimName: fabric-pvc
+
+      containers:
+      - name: ca-orderer
+        image: hyperledger/fabric-ca:1.4.9
+        command: ["sh", "-c", "fabric-ca-server start -b admin:adminpw -d --csr.hosts localhost --csr.hosts {{data['nodeIp']}}"]
+
+        env:
+        - name: FABRIC_CA_HOME
+          value: /etc/hyperledger/fabric-ca-server
+        - name: FABRIC_CA_SERVER_CA_NAME
+          value: ca-orderer
+        - name: FABRIC_CA_SERVER_TLS_ENABLED
+          value: "true"
+        # - name: FABRIC_CA_SERVER_CA_CERTFILE
+        #   value: /fabric/crypto-config/ordererOrganizations/{{data['network_name']}}.com/ca/ca.{{data['network_name']}}.com-cert.pem
+        # - name: FABRIC_CA_SERVER_CA_KEYFILE
+        #   value: /fabric/crypto-config/ordererOrganizations/{{data['network_name']}}.com/ca/priv_sk
+        # - name: FABRIC_CA_SERVER_TLS_CERTFILE
+        #   value: /fabric/crypto-config/ordererOrganizations/{{data['network_name']}}.com/tlsca/tlsca.{{data['network_name']}}.com-cert.pem
+        # - name: FABRIC_CA_SERVER_TLS_KEYFILE
+        #   value: /fabric/crypto-config/ordererOrganizations/{{data['network_name']}}.com/tlsca/priv_sk
+
+        volumeMounts:
+        # - mountPath: /fabric/crypto-config
+        #   name: fabric-files
+        #   subPath: crypto-config
+        - mountPath: /etc/hyperledger/fabric-ca-server
+          name: fabric-files
+          subPath: cas/orderer

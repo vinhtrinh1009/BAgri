@@ -1,0 +1,11 @@
+env/
+__pycache__/
+*.py[cod]
+data/media/
+data/temp/
+fabric_service/chaincode
+fabric_service/data
+fabric_service/projects
+log.txt
+
+node_modules/

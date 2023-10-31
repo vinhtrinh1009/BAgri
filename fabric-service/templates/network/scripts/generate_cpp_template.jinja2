@@ -1,0 +1,28 @@
+#!/bin/bash
+
+function one_line_pem {
+    echo "`awk 'NF {sub(/\\n/, ""); printf "%s\\\\\\\n",$0;}' $1`"
+}
+
+function json_ccp {
+    local PP=$(one_line_pem $4)
+    local CP=$(one_line_pem $5)
+    sed -e "s/\${ORG}/$1/" \
+        -e "s/\${P0PORT}/$2/" \
+        -e "s/\${CAPORT}/$3/" \
+        -e "s#\${PEERPEM}#$PP#" \
+        -e "s#\${CAPEM}#$CP#" \
+        organizations/ccp-template.json
+}
+
+{% for org in data['orgs'] %}
+
+ORG={{org['name']}}
+P0PORT=7051
+CAPORT=7054
+PEERPEM={{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['network_name']}}.com/tlsca/tlsca.{{org['name']}}.{{data['network_name']}}.com-cert.pem
+CAPEM={{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['network_name']}}.com/ca/ca.{{org['name']}}.{{data['network_name']}}.com-cert.pem
+
+echo "$(json_ccp $ORG $P0PORT $CAPORT $PEERPEM $CAPEM)" > organizations/peerOrganizations/org1.example.com/connection-org1.json
+
+{% endfor %}

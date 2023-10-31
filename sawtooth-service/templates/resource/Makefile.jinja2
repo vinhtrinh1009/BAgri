@@ -1,0 +1,9 @@
+all: login run
+
+login:
+	@docker login -u {{data["username"]}} -p {{data["token"]}} registry.gitlab.com
+run:
+	@docker-compose -f sawtooth-node.yaml up --build
+
+remove:
+	@docker-compose -f sawtooth-node.yaml down -v

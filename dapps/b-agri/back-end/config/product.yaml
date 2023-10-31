@@ -1,0 +1,20 @@
+core_service:
+  host: 
+
+account_service:
+  host: 
+  username: 
+  password: 
+
+ipfs:
+  host: 
+  port: 
+
+database:
+  db_name: 
+  username: 
+  password: 
+  port: 
+  host: 
+
+jwt_key: 

@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "1006750391992",
+    "project_id": "bag-29ed7",
+    "storage_bucket": "bag-29ed7.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1006750391992:android:d3d243dfbce3932b89de4d",
+        "android_client_info": {
+          "package_name": "vn.realagent.bag"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1006750391992-6mfrugm48kr4pfnb5obm7nfj2v37lgj9.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBkVHSXlkUazy1m7Vfsla-kbkUoXEzvxE4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1006750391992-6mfrugm48kr4pfnb5obm7nfj2v37lgj9.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1006750391992-9nu670i6pr624bett3u994lfcvd284jl.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "vn.realagent.bag",
+                "app_store_id": "1559157078"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

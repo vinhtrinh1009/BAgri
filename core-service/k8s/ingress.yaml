@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: core-service-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+    nginx.ingress.kubernetes.io/default-backend: core-service
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: core.v-chain.vn
+      http:
+        paths:
+        - pathType: Prefix
+          path: /?(.*)
+          backend:
+            service:
+              name: core-service
+              port:
+                number: 80
+
+

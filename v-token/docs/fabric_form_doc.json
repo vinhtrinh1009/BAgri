@@ -1,0 +1,889 @@
+{
+    "dapp_id": "fabric-token",
+    "dapp_name": "Token ERC20 for Fabric Network",
+    "dapp_description": "Welcome to the V-Chain Token SDK documentation site! Please note that both the V-Chain platform and this documentation site will improve over time and is still a work-in-progress. Have fun using our SDK!",
+    "folder_tree": [
+        {
+          "name": "cli",
+          "children": [
+            {
+              "name": "enrollAmin.js",
+              "description": "Enroll Admin file."
+            },
+            {
+              "name": "registerUser.js",
+              "description": "Register User."
+            },
+            {
+              "name": "enrollOwner.js",
+              "description": "Enroll token contract owner file."
+            },
+            {
+              "name": "example.js",
+              "description": "Example running sdk file"
+            }
+          ]
+        },
+        {
+          "name": "connection-files",
+          "children": [
+            {
+              "name": "ccp.json",
+              "description": "Connection Profile json file."
+            }
+          ]
+        },
+        {
+          "name": "fabric",
+          "children": [
+            {
+              "name": "network.js",
+              "description": "Chaincode Interaction SDK file."
+            }
+          ]
+        },
+        {
+          "name": "package.json",
+          "description": "Package."
+        },
+        {
+          "name": "config.js",
+          "description": "Store token owner certificate and private key"
+        }
+    ],
+    "getting_started": [
+        {
+            "instruction": "Install requirement package",
+            "description": "Open Terminal, change directory to SDK folder and run below command",
+            "commands": [
+              {
+                "language": "bash",
+                "command": "npm install"
+              }
+            ]
+          },
+          {
+            "instruction": "Enroll Admin",
+            "commands": [
+              {
+                "language": "bash",
+                "command": "node ./cli/enrollAmin.js --org=[orgname] "
+              }
+            ]
+          },
+          {
+            "instruction": "Register User",
+            "commands": [
+              {
+                "language": "bash",
+                "command": "node ./cli/registerUser.js --org=[orgname] --username=[username] "
+              }
+            ]
+          },
+          {
+            "instruction": "Import SDK",
+            "commands": [
+              {
+                "language": "javascript",
+                "command": "const network = require('./fabric/network');"
+              }
+            ]
+          },
+          {
+            "instruction": "Connect to network",
+            "commands": [
+              {
+                "language": "javascript",
+                "command": "let obj = await network.connectToNetwork(organizationName, userName);"
+              }
+            ]
+          },
+          {
+            "instruction": "Development with function in SDK"
+          }
+    ],
+    "functions": [
+          {
+            "name": "network.enrollAdmin",
+            "description": "Enroll an admin user for later used",
+            "parameters": [
+                {
+                  "name": "org",
+                  "type": "string",
+                  "description": "Organization name"
+                }
+            ],
+            "returns": {
+                "type": "object",
+                "description": "Result Object",
+                "fields": [
+                  {
+                    "name": "success",
+                    "type": "boolean",
+                    "description": "Enroll admin successfully or not"
+                  },
+                  {
+                    "name": "msg",
+                    "type": "string",
+                    "description": "Message"
+                  },
+                  {
+                    "name": "err",
+                    "type": "object",
+                    "description": "Error"
+                  }
+                ]
+              }
+          },
+          {
+            "name": "network.enrollOwner",
+            "description": "Enroll token contract owner user for later used",
+            "parameters": [
+                {
+                  "name": "owner_cert",
+                  "type": "string",
+                  "description": "Owner certificate stored in config.js"
+                },
+                {
+                  "name": "owner_private_key",
+                  "type": "string",
+                  "description": "Owner private key stored in config.js" 
+                }
+            ],
+            "returns": {
+                "type": "object",
+                "description": "Result Object",
+                "fields": [
+                  {
+                    "name": "success",
+                    "type": "boolean",
+                    "description": "Enroll owner successfully or not"
+                  },
+                  {
+                    "name": "msg",
+                    "type": "string",
+                    "description": "Message"
+                  },
+                  {
+                    "name": "err",
+                    "type": "object",
+                    "description": "Error"
+                  }
+                ]
+              }
+          },
+          {
+            "name": "network.registerUser",
+            "description": "Register and enroll new user identity for later used",
+            "parameters":[
+              {
+                "name": "org",
+                "type": "string",
+                "description": "Organization name"   
+              },
+              {
+                "name": "username",
+                "type": "string",
+                "description": "Username"
+              }
+            ],
+            "returns": {
+                "type": "object",
+                "description": "Result Object",
+                "fields": [
+                  {
+                    "name": "success",
+                    "type": "boolean",
+                    "description": "Register user successfully or not"
+                  },
+                  {
+                    "name": "msg",
+                    "type": "string",
+                    "description": "Message"
+                  },
+                  {
+                    "name": "err",
+                    "type": "object",
+                    "description": "Error"
+                  }
+                ]
+              }
+          },
+          {
+            "name": "network.connectToNetwork",
+            "description": "Connect to network",
+            "parameters": [
+              {
+                "name": "orgName",
+                "type": "string",
+                "description": "Organization name"
+              },
+              {
+                "name": "username",
+                "type": "string",
+                "description": "Username"
+              }
+            ],
+            "returns": {
+                "type": "object",
+                "description": "Network Object",
+                "fields": [
+                  {
+                    "name": "contract",
+                    "type": "object",
+                    "description": "Contract object"
+                  },
+                  {
+                    "name": "network",
+                    "type": "object",
+                    "description": "Network object"
+                  },
+                  {
+                    "name": "gateway",
+                    "type": "object",
+                    "description": "Gateway object"
+                  },
+                  {
+                    "name": "username",
+                    "type": "string",
+                    "description": "Username"
+                  }
+                ]
+              }
+          },
+          {
+              "name": "network.getName",
+              "description": "Get token name",
+              "parameters": [
+                  {
+                    "name": "networkObj",
+                    "type": "Object",
+                    "description": "Network Object created by network.connectToNetwork"
+                  }
+              ],
+              "returns": {
+                "type": "object",
+                "description": "Result Object",
+                "fields": [
+                  {
+                    "name": "success",
+                    "type": "boolean",
+                    "description": "Invoke transaction successfully or not"
+                  },
+                  {
+                    "name": "msg",
+                    "type": "string",
+                    "description": "Token name"
+                  },
+                  {
+                    "name": "err",
+                    "type": "object",
+                    "description": "Error"
+                  }
+                ]
+              }
+          },
+          {
+              "name": "network.getOwner",
+              "description": "Get token owner",
+              "parameters": [
+                {
+                  "name": "networkObj",
+                  "type": "Object",
+                  "description": "Network Object created by network.connectToNetwork"
+                }
+              ],
+              "returns": {
+                "type": "object",
+                "description": "Result Object",
+                "fields": [
+                  {
+                    "name": "success",
+                    "type": "boolean",
+                    "description": "Invoke transaction successfully or not"
+                  },
+                  {
+                    "name": "msg",
+                    "type": "string",
+                    "description": "Owner identity"
+                  },
+                  {
+                    "name": "err",
+                    "type": "object",
+                    "description": "Error"
+                  }
+                ]
+              }
+          },
+          {
+              "name": "network.getSymbol",
+              "description": "Get token symbol",
+              "parameters": [
+                {
+                  "name": "networkObj",
+                  "type": "Object",
+                  "description": "Network Object created by network.connectToNetwork"
+                }
+              ],
+              "returns": {
+                "type": "object",
+                "description": "Result Object",
+                "fields": [
+                  {
+                    "name": "success",
+                    "type": "boolean",
+                    "description": "Invoke transaction successfully or not"
+                  },
+                  {
+                    "name": "msg",
+                    "type": "string",
+                    "description": "Token symbol"
+                  },
+                  {
+                    "name": "err",
+                    "type": "object",
+                    "description": "Error"
+                  }
+                ]
+              }
+          },
+          {
+              "name": "network.getDecimals",
+              "description": "Get token decimals",
+              "parameters": [
+                {
+                  "name": "networkObj",
+                  "type": "Object",
+                  "description": "Network Object created by network.connectToNetwork"
+                }
+              ],
+              "returns": {
+                "type": "object",
+                "description": "Result Object",
+                "fields": [
+                  {
+                    "name": "success",
+                    "type": "boolean",
+                    "description": "Invoke transaction successfully or not"
+                  },
+                  {
+                    "name": "msg",
+                    "type": "string",
+                    "description": "Token decimals"
+                  },
+                  {
+                    "name": "err",
+                    "type": "object",
+                    "description": "Error"
+                  }
+                ]
+              }
+          },
+          {
+              "name": "network.getTotalSupply",
+              "description": "Get token total supply",
+              "parameters": [
+                {
+                  "name": "networkObj",
+                  "type": "Object",
+                  "description": "Network Object created by network.connectToNetwork"
+                }
+              ],
+              "returns": {
+                "type": "object",
+                "description": "Result Object",
+                "fields": [
+                  {
+                    "name": "success",
+                    "type": "boolean",
+                    "description": "Invoke transaction successfully or not"
+                  },
+                  {
+                    "name": "msg",
+                    "type": "string",
+                    "description": "Token total supply"
+                  },
+                  {
+                    "name": "err",
+                    "type": "object",
+                    "description": "Error"
+                  }
+                ]
+              }
+          },
+          {
+              "name": "network.getBalanceOf",
+              "description": "Get balance of an account",
+              "parameters": [
+                {
+                  "name": "networkObj",
+                  "type": "Object",
+                  "description": "Network Object created by network.connectToNetwork"
+                },
+                {
+                  "name": "username",
+                  "type": "string",
+                  "description": "Username"
+                },
+                {
+                  "name": "org",
+                  "type": "string",
+                  "description": "Organization name"
+                }
+              ],
+              "returns": {
+                "type": "object",
+                "description": "Result Object",
+                "fields": [
+                  {
+                    "name": "success",
+                    "type": "boolean",
+                    "description": "Invoke transaction successfully or not"
+                  },
+                  {
+                    "name": "msg",
+                    "type": "string",
+                    "description": "Balance of inputed identity"
+                  },
+                  {
+                    "name": "err",
+                    "type": "object",
+                    "description": "Error"
+                  }
+                ]
+              }
+          },
+          {
+            "name": "network.getAllowance",
+            "description": "Get amount of token that an account is allowed to use from another account",
+            "parameters": [
+              {
+                "name": "networkObj",
+                "type": "Object",
+                "description": "Network Object created by network.connectToNetwork"
+              },
+              {
+                "name": "owner_username",
+                "type": "string",
+                "description": "Owner Username"
+              },
+              {
+                "name": "owner_org",
+                "type": "string",
+                "description": "Owner Organization name"
+              },
+              {
+                "name": "spender_username",
+                "type": "string",
+                "description": "Spender Username"
+              },
+              {
+                "name": "spender_org",
+                "type": "string",
+                "description": "Spender Organization name"
+              }
+            ],
+            "returns": {
+              "type": "object",
+              "description": "Result Object",
+              "fields": [
+                {
+                  "name": "success",
+                  "type": "boolean",
+                  "description": "Invoke transaction successfully or not"
+                },
+                {
+                  "name": "msg",
+                  "type": "string",
+                  "description": "Amount of token allowed"
+                },
+                {
+                  "name": "err",
+                  "type": "object",
+                  "description": "Error"
+                }
+              ]
+            }
+          },
+          {
+              "name": "network.updateApproval",
+              "description": "Approve another account to use your own tokens",
+              "parameters": [
+                {
+                  "name": "networkObj",
+                  "type": "Object",
+                  "description": "Network Object created by network.connectToNetwork with holder username that wants to allow "
+                },
+                {
+                  "name": "username",
+                  "type": "string",
+                  "description": "Allowed username"
+                },
+                {
+                  "name": "org",
+                  "type": "string",
+                  "description": "Allowed Organization name"
+                },
+                {
+                  "name": "amount",
+                  "type": "int",
+                  "description": "Amount of tokens to be approved"
+                }
+              ],
+              "returns": {
+                "type": "object",
+                "description": "Result Object",
+                "fields": [
+                  {
+                    "name": "success",
+                    "type": "boolean",
+                    "description": "Invoke transaction successfully or not"
+                  },
+                  {
+                    "name": "msg",
+                    "type": "string",
+                    "description": "Successful message"
+                  },
+                  {
+                    "name": "err",
+                    "type": "object",
+                    "description": "Error"
+                  }
+                ]
+              }
+          },
+          {
+              "name": "network.transferOwnership",
+              "description": "Transfer ownership of token contract to another account",
+              "parameters": [
+                  {
+                    "name": "networkObj",
+                    "type": "Object",
+                    "description": "Network Object created by network.connectToNetwork with contract owner username "
+                  },
+                  {
+                    "name": "username",
+                    "type": "string",
+                    "description": "New contract owner username"
+                  },
+                  {
+                    "name": "org",
+                    "type": "string",
+                    "description": "New contract owner organization name"
+                  }
+              ],
+              "returns": {
+                "type": "object",
+                "description": "Result Object",
+                "fields": [
+                  {
+                    "name": "success",
+                    "type": "boolean",
+                    "description": "Invoke transaction successfully or not"
+                  },
+                  {
+                    "name": "msg",
+                    "type": "string",
+                    "description": "Successful message"
+                  },
+                  {
+                    "name": "err",
+                    "type": "object",
+                    "description": "Error"
+                  }
+                ]
+              }
+          },
+          {
+              "name": "network.transfer",
+              "description": "Transfer tokens to an account",
+              "parameters": [
+                  {
+                    "name": "networkObj",
+                    "type": "Object",
+                    "description": "Network Object created by network.connectToNetwork with spender username "
+                  },
+                  {
+                    "name": "username",
+                    "type": "string",
+                    "description": "Receiver username"
+                  },
+                  {
+                    "name": "org",
+                    "type": "string",
+                    "description": "Receiver organization name"
+                  },
+                  {
+                    "name": "amount",
+                    "type": "int",
+                    "description": "Amount of tokens to be transfered"
+                  }
+              ],
+              "returns": {
+                "type": "object",
+                "description": "Result Object",
+                "fields": [
+                  {
+                    "name": "success",
+                    "type": "boolean",
+                    "description": "Invoke transaction successfully or not"
+                  },
+                  {
+                    "name": "msg",
+                    "type": "string",
+                    "description": "Successful message"
+                  },
+                  {
+                    "name": "err",
+                    "type": "object",
+                    "description": "Error"
+                  }
+                ]
+              }
+          },
+          {
+              "name": "network.transferFrom",
+              "description": "3rd-party transfer tokens to an account. 3rd party should be approved to use 1st party tokens first.",
+              "parameters": [
+                  {
+                    "name": "networkObj",
+                    "type": "Object",
+                    "description": "Network Object created by network.connectToNetwork with 3rd party username"
+                  },
+                  {
+                    "name": "spender_username",
+                    "type": "string",
+                    "description": "Spender username"
+                  },
+                  {
+                    "name": "spender_org",
+                    "type": "string",
+                    "description": "spender organization name"
+                  },
+                  {
+                    "name": "receiver_username",
+                    "type": "string",
+                    "description": "receiver username"
+                  },
+                  {
+                    "name": "receiver_org",
+                    "type": "string",
+                    "description": "Receiver organization name"
+                  },
+                  {
+                    "name": "amount",
+                    "type": "int",
+                    "description": "Amount of tokens to be transfered"
+                  }
+              ],
+              "returns": {
+                "type": "object",
+                "description": "Result Object",
+                "fields": [
+                  {
+                    "name": "success",
+                    "type": "boolean",
+                    "description": "Invoke transaction successfully or not"
+                  },
+                  {
+                    "name": "msg",
+                    "type": "string",
+                    "description": "Successful message"
+                  },
+                  {
+                    "name": "err",
+                    "type": "object",
+                    "description": "Error"
+                  }
+                ]
+              }
+          },
+          {
+              "name": "network.mint",
+              "description": "Mint an amount of tokens. Only contract owner can mint.",
+              "parameters": [
+                {
+                  "name": "networkObj",
+                  "type": "Object",
+                  "description": "Network Object created by network.connectToNetwork with contract owner username"
+                },
+                {
+                  "name": "amount",
+                  "type": "int",
+                  "description": "Amount of tokens to be minted"
+                }
+              ],
+              "returns": {
+                "type": "object",
+                "description": "Result Object",
+                "fields": [
+                  {
+                    "name": "success",
+                    "type": "boolean",
+                    "description": "Invoke transaction successfully or not"
+                  },
+                  {
+                    "name": "msg",
+                    "type": "string",
+                    "description": "Successful message"
+                  },
+                  {
+                    "name": "err",
+                    "type": "object",
+                    "description": "Error"
+                  }
+                ]
+              }
+          },
+          {
+              "name": "network.burn",
+              "description": "Burn an amount of tokens.",
+              "parameters": [
+                  {
+                    "name": "networkObj",
+                    "type": "Object",
+                    "description": "Network Object created by network.connectToNetwork "
+                  },
+                  {
+                    "name": "amount",
+                    "type": "int",
+                    "description": "Amount of tokens to be burned"
+                  }
+              ],
+              "returns": {
+                "type": "object",
+                "description": "Result Object",
+                "fields": [
+                  {
+                    "name": "success",
+                    "type": "boolean",
+                    "description": "Invoke transaction successfully or not"
+                  },
+                  {
+                    "name": "msg",
+                    "type": "string",
+                    "description": "Successful message"
+                  },
+                  {
+                    "name": "err",
+                    "type": "object",
+                    "description": "Error"
+                  }
+                ]
+              }
+          },
+          {
+            "name": "network.burnFrom",
+            "description": "Burn an amount of tokens from another account. Note that the transaction caller must be approved by the burnee account",
+            "parameters": [
+                {
+                  "name": "networkObj",
+                  "type": "Object",
+                  "description": "Network Object created by network.connectToNetwork "
+                },
+                {
+                    "name": "burnee_org",
+                    "type": "string",
+                    "description": "burnee organization name"
+                  },
+                  {
+                    "name": "burnee_username",
+                    "type": "string",
+                    "description": "burnee username"
+                  },
+                {
+                  "name": "amount",
+                  "type": "int",
+                  "description": "Amount of tokens to be burned"
+                }
+            ],
+            "returns": {
+              "type": "object",
+              "description": "Result Object",
+              "fields": [
+                {
+                  "name": "success",
+                  "type": "boolean",
+                  "description": "Invoke transaction successfully or not"
+                },
+                {
+                  "name": "msg",
+                  "type": "string",
+                  "description": "Successful message"
+                },
+                {
+                  "name": "err",
+                  "type": "object",
+                  "description": "Error"
+                }
+              ]
+            }
+        },
+          {
+              "name": "network.pause",
+              "description": "Pause the token. Only contract owner can pause.",
+              "parameters": [
+                  {
+                    "name": "networkObj",
+                    "type": "Object",
+                    "description": "Network Object created by network.connectToNetwork with contract owner username"
+                  }
+              ],
+              "returns": {
+                "type": "object",
+                "description": "Result Object",
+                "fields": [
+                  {
+                    "name": "success",
+                    "type": "boolean",
+                    "description": "Invoke transaction successfully or not"
+                  },
+                  {
+                    "name": "msg",
+                    "type": "string",
+                    "description": "Successful message"
+                  },
+                  {
+                    "name": "err",
+                    "type": "object",
+                    "description": "Error"
+                  }
+                ]
+              }
+          },
+          {
+              "name": "network.unPause",
+              "description": "Unpause the token. Only contract owner can unpause.",
+              "parameters": [
+                {
+                  "name": "networkObj",
+                  "type": "Object",
+                  "description": "Network Object created by network.connectToNetwork with contract owner username"
+                }
+            ],
+            "returns": {
+              "type": "object",
+              "description": "Result Object",
+              "fields": [
+                {
+                  "name": "success",
+                  "type": "boolean",
+                  "description": "Invoke transaction successfully or not"
+                },
+                {
+                  "name": "msg",
+                  "type": "string",
+                  "description": "Successful message"
+                },
+                {
+                  "name": "err",
+                  "type": "object",
+                  "description": "Error"
+                }
+              ]
+            }
+          }
+    ],
+    "username": "V-Chain Team"
+  }
+  

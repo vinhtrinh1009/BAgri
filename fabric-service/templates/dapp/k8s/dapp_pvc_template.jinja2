@@ -1,0 +1,14 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: {{data['dapp_name']}}-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ""
+  resources:
+    requests:
+      storage: 1Gi
+  selector:
+    matchLabels:
+      name: {{data['dapp_name']}}-files

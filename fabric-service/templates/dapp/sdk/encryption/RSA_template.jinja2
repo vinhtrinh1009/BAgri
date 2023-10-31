@@ -1,0 +1,27 @@
+const NodeRSA = require('node-rsa');
+
+class RSA {
+  constructor(privateKey) {
+    this.rsa = new NodeRSA(privateKey);
+  }
+
+  encrypt(plaintext) {
+    try{
+      return this.rsa.encrypt(plaintext, 'base64');
+    }
+    catch(e) {
+      throw "Failed to Encrypt";
+    }
+  }
+
+  decrypt(ciphertext) {
+    try{
+      return this.rsa.decrypt(ciphertext, 'utf8');
+    }
+    catch(e) {
+      throw "Failed to Decrypt";
+    }
+  }
+}
+
+module.exports = RSA

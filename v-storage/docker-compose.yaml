@@ -1,0 +1,17 @@
+version: '3.2'
+
+services:
+  v-storage:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: v-storage
+    restart: always
+    volumes:
+      - .:/v_storage
+    environment:
+      # use in code
+      - CONFIG_FILE=develop.yaml
+    ports:
+      - 8083:8080
+    command: python main.py

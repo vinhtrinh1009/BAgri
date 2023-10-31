@@ -1,0 +1,17 @@
+{
+    "args": {
+        "step": 0,
+        "from": "0x41d34752F32dAbf56367FA7aC7b021562a173854",
+        "to": "0x1Dc87d6315f80C940C88432b49c8428EeD5554fB",
+        "amount": 10000000000000000000,
+        "date": 1637553740,
+        "nonce": 0
+    },
+    "event": "Transfer",
+    "logIndex": 3,
+    "transactionIndex": 2,
+    "transactionHash": "0x223cc42b972574f58b99e7d3db9eeb444721979fd3f343391207589fb5821129",
+    "address": "0x1d3B4f152D1a2e827c401C92Bb87f8c09184DA37",
+    "blockHash": "0x2503a65ba442c05fe1939162389c770c76bf6763d96e7c8c9ae14e70ed2ced21",
+    "blockNumber": 9684708
+}

@@ -1,0 +1,8 @@
+aiohttp==3.6.0
+aiohttp-cors==0.7.0
+gunicorn==19.7.1
+motor==2.2.0
+pymongo==3.11.0
+PyYAML==5.1.2
+PyJWT==1.7.1
+requests==2.22.0

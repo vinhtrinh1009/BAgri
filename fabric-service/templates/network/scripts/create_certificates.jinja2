@@ -1,0 +1,224 @@
+{% set orgs = data['config']['blockchain_peer_config']['organizations'] %}
+
+{% for org in orgs %}
+{% set org_index = loop.index - 1%}
+createcertificatesFor{{org['name']}}() {
+  echo
+  echo "Enroll the CA admin"
+  echo
+  mkdir -p {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/
+  export FABRIC_CA_CLIENT_HOME={{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/
+
+  fabric-ca-client enroll -u https://admin:adminpw@{{data['nodeIp']}}:{{calPeerCaNodePort(org_index)}} --caname ca-org-{{org['name']}} --tls.certfiles {{data['network_folder']}}/cas/orgs/{{org['name']}}/tls-cert.pem
+
+  echo 'NodeOUs:
+  Enable: true
+  ClientOUIdentifier:
+    Certificate: cacerts/ca.{{org['name']}}.{{data['config']['name']}}.com-cert.pem
+    OrganizationalUnitIdentifier: client
+  PeerOUIdentifier:
+    Certificate: cacerts/ca.{{org['name']}}.{{data['config']['name']}}.com-cert.pem
+    OrganizationalUnitIdentifier: peer
+  AdminOUIdentifier:
+    Certificate: cacerts/ca.{{org['name']}}.{{data['config']['name']}}.com-cert.pem
+    OrganizationalUnitIdentifier: admin
+  OrdererOUIdentifier:
+    Certificate: cacerts/ca.{{org['name']}}.{{data['config']['name']}}.com-cert.pem
+    OrganizationalUnitIdentifier: orderer' >{{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/msp/config.yaml
+
+  {% for peer_index in range(org['number_peer']) %}
+  echo
+  echo "Register peer{{peer_index}}"
+  echo
+  fabric-ca-client register --caname ca-org-{{org['name']}} --id.name peer{{peer_index}} --id.secret peer{{peer_index}}pw --id.type peer --tls.certfiles {{data['network_folder']}}/cas/orgs/{{org['name']}}/tls-cert.pem
+  {% endfor %}
+  
+  echo
+  echo "Register user"
+  echo
+  fabric-ca-client register --caname ca-org-{{org['name']}} --id.name user1 --id.secret user1pw --id.type client --tls.certfiles {{data['network_folder']}}/cas/orgs/{{org['name']}}/tls-cert.pem
+
+  echo
+  echo "Register the org admin"
+  echo
+  fabric-ca-client register --caname ca-org-{{org['name']}} --id.name {{org['name']}}admin --id.secret {{org['name']}}adminpw --id.type admin --tls.certfiles {{data['network_folder']}}/cas/orgs/{{org['name']}}/tls-cert.pem
+
+  mkdir -p {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/peers
+
+  # -----------------------------------------------------------------------------------
+  {% for peer_index in range(org['number_peer']) %}
+
+  mkdir -p {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/peers/peer{{peer_index}}.{{org['name']}}.{{data['config']['name']}}.com
+
+  echo
+  echo "## Generate the peer{{peer_index}} msp"
+  echo
+  fabric-ca-client enroll -u https://peer{{peer_index}}:peer{{peer_index}}pw@{{data['nodeIp']}}:{{calPeerCaNodePort(org_index)}} --caname ca-org-{{org['name']}} -M {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/peers/peer{{peer_index}}.{{org['name']}}.{{data['config']['name']}}.com/msp --csr.hosts peer{{peer_index}}.{{org['name']}}.{{data['config']['name']}}.com --tls.certfiles {{data['network_folder']}}/cas/orgs/{{org['name']}}/tls-cert.pem
+
+  cp {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/msp/config.yaml {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/peers/peer{{peer_index}}.{{org['name']}}.{{data['config']['name']}}.com/msp/config.yaml
+
+  echo
+  echo "## Generate the peer{{peer_index}}-tls certificates"
+  echo
+  fabric-ca-client enroll -u https://peer{{peer_index}}:peer{{peer_index}}pw@{{data['nodeIp']}}:{{calPeerCaNodePort(org_index)}} --caname ca-org-{{org['name']}} -M {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/peers/peer{{peer_index}}.{{org['name']}}.{{data['config']['name']}}.com/tls --enrollment.profile tls --csr.hosts peer{{peer_index}}.{{org['name']}}.{{data['config']['name']}}.com --csr.hosts localhost --csr.hosts {{data['nodeIp']}} --tls.certfiles {{data['network_folder']}}/cas/orgs/{{org['name']}}/tls-cert.pem
+
+  cp {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/peers/peer{{peer_index}}.{{org['name']}}.{{data['config']['name']}}.com/tls/tlscacerts/* {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/peers/peer{{peer_index}}.{{org['name']}}.{{data['config']['name']}}.com/tls/ca.crt
+  cp {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/peers/peer{{peer_index}}.{{org['name']}}.{{data['config']['name']}}.com/tls/signcerts/* {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/peers/peer{{peer_index}}.{{org['name']}}.{{data['config']['name']}}.com/tls/server.crt
+  cp {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/peers/peer{{peer_index}}.{{org['name']}}.{{data['config']['name']}}.com/tls/keystore/* {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/peers/peer{{peer_index}}.{{org['name']}}.{{data['config']['name']}}.com/tls/server.key
+
+  mv {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/peers/peer{{peer_index}}.{{org['name']}}.{{data['config']['name']}}.com/msp/cacerts/* {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/peers/peer{{peer_index}}.{{org['name']}}.{{data['config']['name']}}.com/msp/cacerts/ca.{{org['name']}}.{{data['config']['name']}}.com-cert.pem
+  mv {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/peers/peer{{peer_index}}.{{org['name']}}.{{data['config']['name']}}.com/msp/signcerts/* {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/peers/peer{{peer_index}}.{{org['name']}}.{{data['config']['name']}}.com/msp/signcerts/peer{{peer_index}}.{{org['name']}}.{{data['config']['name']}}.com-cert.pem
+  mv {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/peers/peer{{peer_index}}.{{org['name']}}.{{data['config']['name']}}.com/msp/keystore/* {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/peers/peer{{peer_index}}.{{org['name']}}.{{data['config']['name']}}.com/msp/keystore/priv_sk
+
+
+  # ------------------------------------------------------------------------------------------------
+  {% endfor %}
+
+  mkdir {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/msp/tlscacerts
+  cp {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/peers/peer0.{{org['name']}}.{{data['config']['name']}}.com/tls/tlscacerts/* {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/msp/tlscacerts/ca.crt
+
+  mkdir {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/tlsca
+  cp {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/peers/peer0.{{org['name']}}.{{data['config']['name']}}.com/tls/tlscacerts/* {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/tlsca/tlsca.{{org['name']}}.{{data['config']['name']}}.com-cert.pem
+
+  mkdir {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/ca
+  cp {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/peers/peer0.{{org['name']}}.{{data['config']['name']}}.com/msp/cacerts/* {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/ca/ca.{{org['name']}}.{{data['config']['name']}}.com-cert.pem
+
+  mv {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/msp/cacerts/* {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/msp/cacerts/ca.{{org['name']}}.{{data['config']['name']}}.com-cert.pem
+
+  mkdir -p {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/users
+  mkdir -p {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/users/User1@{{org['name']}}.{{data['config']['name']}}.com
+
+  echo
+  echo "## Generate the user msp"
+  echo
+  fabric-ca-client enroll -u https://user1:user1pw@{{data['nodeIp']}}:{{calPeerCaNodePort(org_index)}} --caname ca-org-{{org['name']}} -M {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/users/User1@{{org['name']}}.{{data['config']['name']}}.com/msp --tls.certfiles {{data['network_folder']}}/cas/orgs/{{org['name']}}/tls-cert.pem
+
+  mv {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/users/User1@{{org['name']}}.{{data['config']['name']}}.com/msp/cacerts/* {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/users/User1@{{org['name']}}.{{data['config']['name']}}.com/msp/cacerts/ca.{{org['name']}}.{{data['config']['name']}}.com-cert.pem
+  mv {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/users/User1@{{org['name']}}.{{data['config']['name']}}.com/msp/signcerts/* {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/users/User1@{{org['name']}}.{{data['config']['name']}}.com/msp/signcerts/User1@{{org['name']}}.{{data['config']['name']}}.com-cert.pem
+  mv {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/users/User1@{{org['name']}}.{{data['config']['name']}}.com/msp/keystore/* {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/users/User1@{{org['name']}}.{{data['config']['name']}}.com/msp/keystore/priv_sk
+
+
+  mkdir -p {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/users/Admin@{{org['name']}}.{{data['config']['name']}}.com
+
+  echo
+  echo "## Generate the org admin msp"
+  echo
+  fabric-ca-client enroll -u https://{{org['name']}}admin:{{org['name']}}adminpw@{{data['nodeIp']}}:{{calPeerCaNodePort(org_index)}} --caname ca-org-{{org['name']}} -M {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/users/Admin@{{org['name']}}.{{data['config']['name']}}.com/msp --tls.certfiles {{data['network_folder']}}/cas/orgs/{{org['name']}}/tls-cert.pem
+
+  cp {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/msp/config.yaml {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/users/Admin@{{org['name']}}.{{data['config']['name']}}.com/msp/config.yaml
+
+  mv {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/users/Admin@{{org['name']}}.{{data['config']['name']}}.com/msp/cacerts/* {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/users/Admin@{{org['name']}}.{{data['config']['name']}}.com/msp/cacerts/ca.{{org['name']}}.{{data['config']['name']}}.com-cert.pem
+  mv {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/users/Admin@{{org['name']}}.{{data['config']['name']}}.com/msp/signcerts/* {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/users/Admin@{{org['name']}}.{{data['config']['name']}}.com/msp/signcerts/Admin@{{org['name']}}.{{data['config']['name']}}.com-cert.pem
+  mv {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/users/Admin@{{org['name']}}.{{data['config']['name']}}.com/msp/keystore/* {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['config']['name']}}.com/users/Admin@{{org['name']}}.{{data['config']['name']}}.com/msp/keystore/priv_sk
+
+}
+{% endfor %}
+
+createCretificateForOrderer() {
+  echo
+  echo "Enroll the CA admin"
+  echo
+  mkdir -p {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com
+
+  export FABRIC_CA_CLIENT_HOME={{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com
+
+  fabric-ca-client enroll -u https://admin:adminpw@{{data['nodeIp']}}:{{calOrdererCaNodePort()}} --caname ca-orderer --tls.certfiles {{data['network_folder']}}/cas/orderer/tls-cert.pem
+
+  echo 'NodeOUs:
+  Enable: true
+  ClientOUIdentifier:
+    Certificate: cacerts/ca.{{data['config']['name']}}.com-cert.pem
+    OrganizationalUnitIdentifier: client
+  PeerOUIdentifier:
+    Certificate: cacerts/ca.{{data['config']['name']}}.com-cert.pem
+    OrganizationalUnitIdentifier: peer
+  AdminOUIdentifier:
+    Certificate: cacerts/ca.{{data['config']['name']}}.com-cert.pem
+    OrganizationalUnitIdentifier: admin
+  OrdererOUIdentifier:
+    Certificate: cacerts/ca.{{data['config']['name']}}.com-cert.pem
+    OrganizationalUnitIdentifier: orderer' >{{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/msp/config.yaml
+
+  echo
+  echo "Register orderer"
+  echo
+
+  fabric-ca-client register --caname ca-orderer --id.name orderer --id.secret ordererpw --id.type orderer --tls.certfiles {{data['network_folder']}}/cas/orderer/tls-cert.pem
+
+  echo
+  echo "Register the orderer admin"
+  echo
+
+  fabric-ca-client register --caname ca-orderer --id.name ordererAdmin --id.secret ordererAdminpw --id.type admin --tls.certfiles {{data['network_folder']}}/cas/orderer/tls-cert.pem
+
+  mkdir -p {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/orderers
+  # mkdir -p {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/orderers/{{data['config']['name']}}.com
+
+  # ---------------------------------------------------------------------------
+  #  Orderer
+
+  mkdir -p {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/orderers/orderer.{{data['config']['name']}}.com
+
+  echo
+  echo "## Generate the orderer msp"
+  echo
+  
+  fabric-ca-client enroll -u https://orderer:ordererpw@{{data['nodeIp']}}:{{calOrdererCaNodePort()}} --caname ca-orderer -M {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/orderers/orderer.{{data['config']['name']}}.com/msp --csr.hosts orderer.{{data['config']['name']}}.com --csr.hosts localhost --csr.hosts {{data['nodeIp']}} --tls.certfiles {{data['network_folder']}}/cas/orderer/tls-cert.pem
+
+  cp {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/msp/config.yaml {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/orderers/orderer.{{data['config']['name']}}.com/msp/config.yaml
+
+  echo
+  echo "## Generate the orderer-tls certificates"
+  echo
+
+  fabric-ca-client enroll -u https://orderer:ordererpw@{{data['nodeIp']}}:{{calOrdererCaNodePort()}} --caname ca-orderer -M {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/orderers/orderer.{{data['config']['name']}}.com/tls --enrollment.profile tls --csr.hosts orderer.{{data['config']['name']}}.com --csr.hosts localhost --csr.hosts {{data['nodeIp']}} --tls.certfiles {{data['network_folder']}}/cas/orderer/tls-cert.pem
+
+  cp {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/orderers/orderer.{{data['config']['name']}}.com/tls/tlscacerts/* {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/orderers/orderer.{{data['config']['name']}}.com/tls/ca.crt
+  cp {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/orderers/orderer.{{data['config']['name']}}.com/tls/signcerts/* {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/orderers/orderer.{{data['config']['name']}}.com/tls/server.crt
+  cp {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/orderers/orderer.{{data['config']['name']}}.com/tls/keystore/* {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/orderers/orderer.{{data['config']['name']}}.com/tls/server.key
+
+  mkdir {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/orderers/orderer.{{data['config']['name']}}.com/msp/tlscacerts
+  cp {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/orderers/orderer.{{data['config']['name']}}.com/tls/tlscacerts/* {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/orderers/orderer.{{data['config']['name']}}.com/msp/tlscacerts/tlsca.{{data['config']['name']}}.com-cert.pem
+
+  mv {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/orderers/orderer.{{data['config']['name']}}.com/msp/cacerts/* {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/orderers/orderer.{{data['config']['name']}}.com/msp/cacerts/ca.{{data['config']['name']}}.com-cert.pem
+  mv {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/orderers/orderer.{{data['config']['name']}}.com/msp/signcerts/* {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/orderers/orderer.{{data['config']['name']}}.com/msp/signcerts/orderer.{{data['config']['name']}}.com-cert.pem
+  mv {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/orderers/orderer.{{data['config']['name']}}.com/msp/keystore/* {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/orderers/orderer.{{data['config']['name']}}.com/msp/keystore/priv_sk
+
+
+
+  # ---------------------------------------------------------------------------
+
+  mkdir {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/msp/tlscacerts
+  cp {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/orderers/orderer.{{data['config']['name']}}.com/tls/tlscacerts/* {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/msp/tlscacerts/ca.crt
+
+  mkdir {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/tlsca
+  cp {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/orderers/orderer.{{data['config']['name']}}.com/tls/tlscacerts/* {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/tlsca/tlsca.{{data['config']['name']}}.com-cert.pem
+
+  mkdir {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/ca
+  cp {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/orderers/orderer.{{data['config']['name']}}.com/msp/cacerts/* {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/ca/ca.{{data['config']['name']}}.com-cert.pem
+
+  mv {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/msp/cacerts/* {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/msp/cacerts/ca.{{data['config']['name']}}.com-cert.pem
+
+  mkdir -p {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/users
+  mkdir -p {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/users/Admin@{{data['config']['name']}}.com
+
+  echo
+  echo "## Generate the admin msp"
+  echo
+
+  fabric-ca-client enroll -u https://ordererAdmin:ordererAdminpw@{{data['nodeIp']}}:{{calOrdererCaNodePort()}} --caname ca-orderer -M {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/users/Admin@{{data['config']['name']}}.com/msp --tls.certfiles {{data['network_folder']}}/cas/orderer/tls-cert.pem
+
+  cp {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/msp/config.yaml {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/users/Admin@{{data['config']['name']}}.com/msp/config.yaml
+
+  mv {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/users/Admin@{{data['config']['name']}}.com/msp/cacerts/* {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/users/Admin@{{data['config']['name']}}.com/msp/cacerts/ca.{{data['config']['name']}}.com-cert.pem
+  mv {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/users/Admin@{{data['config']['name']}}.com/msp/signcerts/* {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/users/Admin@{{data['config']['name']}}.com/msp/signcerts/Admin@{{data['config']['name']}}.com-cert.pem
+  mv {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/users/Admin@{{data['config']['name']}}.com/msp/keystore/* {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['config']['name']}}.com/users/Admin@{{data['config']['name']}}.com/msp/keystore/priv_sk
+
+}
+
+{% for org in orgs %}
+createcertificatesFor{{org['name']}}
+
+{% endfor %}
+
+# createCretificateForOrderer

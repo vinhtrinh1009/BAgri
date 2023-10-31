@@ -1,0 +1,127 @@
+.dropdownFile {
+    border-radius: 4px;
+    background-color: white;
+    border: none;
+    outline: none;
+    position: relative;
+    top: 16px !important;
+    right: 16px !important;
+    height: 25px;
+    width: 25px;
+    &__hiden {
+        z-index: 1;
+        position: absolute;
+        top: 24px;
+        right: 0px;
+        border-radius: 4px;
+        font-size: 15px;
+        font-weight: 500;
+        font-family: Rubik;
+        // width: 100px;
+        // height: 25px;
+        background: white;
+        text-align: left;
+    }
+    &__hiden1 {
+        z-index: 1;
+        position: relative;
+        display: inline-block;
+        width: 140px;
+        vertical-align: middle;
+        height: 35px;
+        text-align: inherit;
+        border-radius: 4px;
+        margin-right: 10px;
+        margin-left: 15px;
+        margin-top: 10px;
+        padding-top: 5px;
+        padding-left: 15px;
+        color: black;
+    }
+}
+
+.dropdownFile__hiden1:hover {
+    background-color: #ccc;
+}
+
+.dropdownFile:hover {
+    background-color: #ccc;
+}
+
+.Grid1 {
+    background-color: lightblue;
+}
+
+.Folder1 {
+    background-image: url(../images/other-images/three-dots-vertical.svg);
+    position: relative;
+    right: 0;
+    top: 7px;
+    height: 20px;
+    background-color: #f6f7fb;
+    width: 15px;
+    background-position-x: center;
+    border-radius: 4px;
+    border: none;
+    background-repeat: no-repeat;
+    background-position-y: center;
+}
+
+.Folder1:hover {
+    background-color: #ccc;
+}
+
+.Folder2 {
+    background-image: url(../images/other-images/three-dots-vertical.svg);
+    position: relative;
+    right: -95px;
+    top: -39px;
+    height: 20px;
+    background-color: white;
+    width: 15px;
+    background-position-x: center;
+    border-radius: 4px;
+    border: none;
+    background-repeat: no-repeat;
+    background-position-y: center;
+}
+
+.Folder2:hover {
+    background-color: #ccc;
+}
+.input-search{
+    width: 90% !important;
+}
+.renameFile{
+    background-color: white;
+    font-weight: 480;
+    font-size: 14px;
+    position: absolute;
+    margin-top: -1.7%;
+    width: 180px;
+    outline: none;
+    border-radius: 4px;
+    border: none;
+    margin-left: -8%;
+}
+.renameFolderlist{
+    background-color: white;
+    font-weight: 480;
+    // font-size: 14px;
+    position: relative;
+    // margin-top: -5.7%;
+    width: 250px;
+    outline: none;
+    border-radius: 4px;
+    display: flex;
+    left:-250px;
+    border:none;
+    // top:-26px;
+    // margin-left: -11%;
+}
+a{
+    color:black;
+}
+a:hover{
+    color:black;
+}

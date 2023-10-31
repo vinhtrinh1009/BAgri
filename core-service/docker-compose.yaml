@@ -1,0 +1,17 @@
+version: '3.2'
+
+services:
+  core-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: core_service
+    restart: always
+    volumes:
+      - .:/core_service
+    environment:
+      # use in code
+      - CONFIG_FILE=product.yaml
+    ports:
+      - 8080:8080
+    command: python main.py

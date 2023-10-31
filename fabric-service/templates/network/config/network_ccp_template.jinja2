@@ -1,0 +1,100 @@
+{
+  {% set orgs = data['config']['blockchain_peer_config']['organizations'] %}
+  {% set org_name = orgs[0]['name'] %}
+  {% set pems = data['pems'] %}
+  "name": "{{data['config']['name']}}-{{org_name}}",
+  "version": "1.0.0",
+  "client": {
+    "organization": "{{org_name|capitalize}}",
+    "connection": {
+      "timeout": {
+        "peer": {
+          "endorser": "30000"
+        }
+      }
+    }
+  },
+  "channels": {
+		"{{data['config']['name']}}-appchannel": {
+      "orderers": ["orderer.{{data['config']['name']}}.com"],
+			"peers": {
+        {% for org in orgs %}
+          {% set check1 = loop.last %}
+          {% for peer_index in range(org['number_peer']) %}
+            {% set check2 = check1 and loop.last %}
+        "peer{{peer_index}}.{{org['name']}}.{{data['config']['name']}}.com": {}{% if not check2 %},{% endif %}{{''}}
+          {% endfor %}
+        {% endfor %}
+			},
+			"connection": {
+				"timeout": {
+					"peer": {
+						"endorser": "6000",
+						"eventHub": "6000",
+						"eventReg": "6000"
+					}
+				}
+			}
+		}
+	},
+  "organizations": {
+    {% for org in orgs %}
+    "{{org['name']|capitalize}}": {
+      "mspid": "{{org['name']|capitalize}}MSP",
+      "peers": [
+        {% for peer_index in range(org['number_peer']) %}
+        "peer{{peer_index}}.{{org['name']}}.{{data['config']['name']}}.com"{% if not loop.last %},{% endif %}{{''}}
+        {% endfor %}
+      ],
+      "certificateAuthorities": ["ca-org-{{org['name']}}"]
+    }{% if not loop.last %},{% endif %}{{''}}
+    {% endfor %}
+  },
+  "peers": {
+    {% for org in orgs %}
+      {% set check1 = loop.last %}
+      {% set org_index = loop.index - 1%}
+      {% for peer_index in range(org['number_peer']) %}
+        {% set check2 = check1 and loop.last %}
+    "peer{{peer_index}}.{{org['name']}}.{{data['config']['name']}}.com": {
+      {% set nodePort = calPeerNodePort(org_index, peer_index) %}
+      "url": "grpcs://{{data['nodeIp']}}:{{nodePort}}",
+      "tlsCACerts": {
+        "pem": "{{pems['organizations'][org['name']]['peer_pem']}}"
+      },
+      "grpcOptions": {
+        "ssl-target-name-override": "peer{{peer_index}}.{{org['name']}}.{{data['config']['name']}}.com",
+        "request-timeout": 12001
+      }
+    }{% if not check2 %},{% endif %}{{''}}
+      {% endfor %}
+    {% endfor %}
+  },
+  "orderers": {
+    "orderer.{{data['config']['name']}}.com" :{
+      "url": "grpcs://{{data['nodeIp']}}:{{calOrdererNodePort()}}",
+      "tlsCACerts": {
+        "pem": "{{pems['orderer']['orderer_pem']}}"
+      },
+      "grpcOptions": {
+        "ssl-target-name-override": "orderer.{{data['config']['name']}}.com",
+        "request-timeout": 12001
+      }
+    }
+  },
+  "certificateAuthorities": {
+    {% for org in orgs %}
+    {% set nodePort = calPeerCaNodePort(loop.index - 1) %}
+    "ca-org-{{org['name']}}": {
+      "url": "https://{{data['nodeIp']}}:{{nodePort}}",
+      "caName": "ca-org-{{org['name']}}",
+      "tlsCACerts": {
+        "pem": "{{pems['organizations'][org['name']]['ca_pem']}}"
+      },
+      "httpOptions": {
+        "verify": false
+      }
+    }{% if not loop.last %},{% endif %}{{''}}
+    {% endfor %}
+  }
+}

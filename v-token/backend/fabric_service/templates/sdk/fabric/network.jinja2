@@ -1,0 +1,659 @@
+const FabricCAServices = require("fabric-ca-client");
+const { Wallets, X509WalletMixin, Gateway } = require("fabric-network");
+const fs = require("fs");
+const path = require("path");
+const argv = require("yargs").argv;
+
+require("dotenv").config();
+
+function changeCaseFirstLetter(params) {
+    if (typeof params === "string") {
+        return params.charAt(0).toUpperCase() + params.slice(1) + "MSP";
+    }
+    return null;
+}
+
+exports.enrollAdmin = async function (org){
+    try {
+        let msp = await changeCaseFirstLetter(org);
+    
+        const ccpPath = path.resolve(
+            __dirname,
+            "..",
+            "connection-files",
+            `ccp.json`
+          );
+    
+        const ccpJSON = fs.readFileSync(ccpPath, "utf8");
+        const ccp = JSON.parse(ccpJSON);
+    
+        // Create a new CA client for interacting with the CA.
+        const caInfo = ccp.certificateAuthorities[`ca-org-${org}`];
+        const caTLSCACerts = caInfo.tlsCACerts.pem;
+        const ca = new FabricCAServices(
+          caInfo.url,
+          { trustedRoots: caTLSCACerts, verify: false },
+          caInfo.caName
+        );
+    
+        // Create a new file system based wallet for managing identities.
+        const walletPath = path.join(process.cwd(), `/wallet/wallet-${org}`);
+        const wallet = await Wallets.newFileSystemWallet(walletPath);
+    
+        // Check to see if we've already enrolled the admin user.
+        let identity = await wallet.get('admin');
+        if (identity) {
+            let response = {
+                status: true,
+                msg: 'An identity for the admin user "admin" already exists in the wallet'
+            }
+            return response
+        }
+    
+        const enrollment = await ca.enroll({
+          enrollmentID: "admin",
+          enrollmentSecret: "adminpw",
+        });
+    
+        let x509Identity;
+        x509Identity = {
+          credentials: {
+            certificate: enrollment.certificate,
+            privateKey: enrollment.key.toBytes(),
+          },
+          mspId: msp,
+          type: 'X.509',
+        };
+    
+        await wallet.put('admin', x509Identity);
+        let response = {
+            status: true,
+            msg: 'Successfully enrolled admin user "admin" and imported it into the wallet'
+        }
+        return response
+      } catch (error) {
+        let response = {
+            status: true,
+            msg: `Failed to enroll admin: ${error}`
+        }
+        return response
+      }
+}
+
+exports.enrollOwner = async function (owner_cert, owner_private_key){
+    try {
+        let msp = await changeCaseFirstLetter('{{data['org']}}');
+    
+        const ccpPath = path.resolve(
+            __dirname,
+            "..",
+            "connection-files",
+            `ccp.json`
+          );
+    
+        const ccpJSON = fs.readFileSync(ccpPath, "utf8");
+        const ccp = JSON.parse(ccpJSON);
+    
+        // Create a new CA client for interacting with the CA.
+        const caInfo = ccp.certificateAuthorities[`ca-org-{{data['org']}}`];
+        const caTLSCACerts = caInfo.tlsCACerts.pem;
+        const ca = new FabricCAServices(
+          caInfo.url,
+          { trustedRoots: caTLSCACerts, verify: false },
+          caInfo.caName
+        );
+    
+        // Create a new file system based wallet for managing identities.
+        const walletPath = path.join(process.cwd(), `/wallet/wallet-{{data['org']}}`);
+        const wallet = await Wallets.newFileSystemWallet(walletPath);
+    
+        // Check to see if we've already enrolled the admin user.
+        let identity = await wallet.get('{{data['org']}}admin');
+        if (identity) {
+            let response = {
+                status: true,
+                msg: 'An identity for the admin user "{{data['org']}}admin" already exists in the wallet'
+            }
+            return response
+        }
+    
+        let x509Identity;
+        x509Identity = {
+          credentials: {
+            certificate: owner_cert,
+            privateKey: owner_private_key,
+          },
+          mspId: msp,
+          type: 'X.509',
+        };
+    
+        await wallet.put('{{data['org']}}admin', x509Identity);
+        let response = {
+            status: true,
+            msg: 'Successfully enrolled admin user "{{data['org']}}admin" and imported it into the wallet'
+        }
+        return response
+      } catch (error) {
+        let response = {
+            status: false,
+            msg: `Failed to enroll admin: ${error}`
+        }
+        return response
+      }
+}
+
+exports.registerUser = async function(org, username){
+    try {
+        let msp = await changeCaseFirstLetter(org);
+        let orgAdmin = "admin" + org;
+    
+        const ccpPath = path.resolve(
+            __dirname,
+            "..",
+            "connection-files",
+            `ccp.json`
+          );
+    
+        const ccpJSON = fs.readFileSync(ccpPath, "utf8");
+        const ccp = JSON.parse(ccpJSON);
+    
+        // Create a new file system based wallet for managing identities.
+        const walletPath = path.join(process.cwd(), `/wallet/wallet-${org}`);
+        const wallet = await Wallets.newFileSystemWallet(walletPath);
+    
+        const userIdentity = await wallet.get(username);
+        if (userIdentity) {
+          console.log(
+            `An identity for the user ${username} already exists in the wallet-${org}`
+          );
+          let response = {
+            status: false,
+            msg: `An identity for the user ${username} already exists in the wallet-${org}`
+        }
+        return response
+        }
+    
+        let adminIdentity = await wallet.get('admin');
+        if (!adminIdentity) {
+            let response = {
+                status: false,
+                msg: `Admin user ${orgAdmin} does not exist in the wallet`
+            }
+            return response
+          
+        }
+    
+        const caInfo = ccp.certificateAuthorities[`ca-org-${org}`];
+        const caTLSCACerts = caInfo.tlsCACerts.pem;
+        const ca = new FabricCAServices(
+          caInfo.url,
+          { trustedRoots: caTLSCACerts, verify: false },
+          caInfo.caName
+        );
+    
+        const provider = wallet.getProviderRegistry().getProvider(adminIdentity.type);
+        const adminUser = await provider.getUserContext(adminIdentity, 'admin');
+        let secret;
+        try{
+            secret = await ca.register({ enrollmentID: username, enrollmentSecret: 'passwd', role: 'client', maxEnrollments: -1 }, adminUser);
+            console.log(secret.toString())
+        } catch(error) {
+    
+        }
+        const enrollment = await ca.enroll({ enrollmentID: username, enrollmentSecret: secret ? secret.toString() : "passwd" });
+        let x509Identity;
+        x509Identity = {
+          credentials: {
+            certificate: enrollment.certificate,
+            privateKey: enrollment.key.toBytes(),
+          },
+          mspId: msp,
+          type: 'X.509',
+        };
+    
+        await wallet.put(username, x509Identity);
+    
+        let response = {
+            status: true,
+            msg: `Successfully register user ${username} and imported it into the wallet`
+        }
+        return response
+      } catch (error) {
+        let response = {
+            status: false,
+            msg: `Failed to register user: ${error}`
+        }
+        return response
+      }
+}
+
+exports.connectToNetwork = async function (org, username, secret, cli = false) {
+  try {
+    let identity = username;
+
+    const ccpPath = path.resolve(
+      __dirname,
+      "..",
+      "connection-files",
+      `ccp.json`
+    );
+
+    let walletPath = path.join(process.cwd(), `/wallet/wallet-${org}`);
+
+    if (cli) {
+      walletPath = path.join(process.cwd(), `/wallet/wallet-${org}`);
+    }
+
+    const wallet = await Wallets.newFileSystemWallet(walletPath);
+    const userExists = await wallet.get(username);
+
+    let networkObj;
+
+    if (!userExists) {
+      let response = {};
+      response.error =
+        "An identity for the user " +
+        identity +
+        " does not exist in the wallet. Register " +
+        identity +
+        " first";
+      return response;
+    } else {
+      const gateway = new Gateway();
+
+      const ccpJSON = fs.readFileSync(ccpPath, "utf8");
+      const ccp = JSON.parse(ccpJSON);
+
+      await gateway.connect(ccp, {
+        wallet: wallet,
+        identity: identity,
+        discovery: { enabled: true, asLocalhost: false },
+      });
+
+      const network = await gateway.getNetwork("{{data['network_name']}}-appchannel");
+      const contract = await network.getContract("{{data['token_name']}}");
+
+      networkObj = {
+        contract: contract,
+        network: network,
+        gateway: gateway,
+        username: username,
+      };
+    }
+
+    return networkObj;
+  } catch (error) {
+    console.error(`Failed to evaluate transaction: ${error}`);
+    process.exit(1);
+  }
+};
+
+exports.getName = async function (networkObj){
+
+    try {
+        let response_obj = await networkObj.contract.evaluateTransaction("GetName")
+        let response = {
+            success: true,
+            msg: response_obj.toString()
+        }
+        return response
+    } catch (err) {
+        let response = {
+            success: false,
+            msg: err,
+        };
+        return response
+    }
+    
+}
+
+exports.getOwner = async function (networkObj ){
+    try {
+        let network_obj = await networkObj.contract.evaluateTransaction("GetOwner")
+        let response = {
+            success: true,
+            msg: network_obj.toString()
+        }
+        return response
+    } catch (err) {
+        let response = {
+            success: false,
+            msg: err,
+        };
+        return response
+    }
+    
+}
+
+exports.getSymbol = async function (networkObj ){
+    try {
+        let response_obj = await networkObj.contract.evaluateTransaction("GetSymbol")
+        let response = {
+            success: true,
+            msg: response_obj.toString()
+        }
+        return response
+    } catch (err) {
+        let response = {
+            success: false,
+            msg: err,
+        };
+        return response
+    }
+    
+}
+
+exports.getDecimals = async function (networkObj ){
+    try {
+        let response_obj = await networkObj.contract.evaluateTransaction("GetDecimals")
+        let response = {
+            success: true,
+            msg: response_obj.toString()
+        }
+        return response
+    } catch (err) {
+        let response = {
+            success: false,
+            msg: err,
+        };
+        return response
+    }
+    
+}
+
+exports.getTotalSupply = async function (networkObj){
+    try {
+        let response_obj = await networkObj.contract.evaluateTransaction("GetTotalSupply")
+        let response = {
+            success: true,
+            msg: response_obj.toString()
+        }
+        return response
+    } catch (err) {
+        let response = {
+            success: false,
+            msg: err,
+        };
+        return response
+    }
+    
+}
+
+exports.getBalanceOf = async function (networkObj, username, org ){
+    let msp = changeCaseFirstLetter(org)
+    try {
+        let response_obj = await networkObj.contract.evaluateTransaction("GetBalanceOf", `${msp},fabric-ca-server,${username}`)
+        let response = {
+            success: true,
+            msg: response_obj.toString()
+        }
+        return response
+    } catch (err) {
+        let response = {
+            success: false,
+            msg: err,
+        };
+        return response
+    }
+    
+}
+
+exports.getAllowance = async function (networkObj, owner_username, owner_org, spender_username, spender_org){
+    let owner_msp = changeCaseFirstLetter(owner_org)
+    let spender_msp = changeCaseFirstLetter(spender_org)
+    try {
+        let response_obj = await networkObj.contract.evaluateTransaction("GetAllowance", `${owner_msp},fabric-ca-server,${owner_username}`, `${spender_msp},fabric-ca-server,${spender_username}`)
+        let response = {
+            success: true,
+            msg: response_obj.toString()
+        }
+        return response
+    } catch (err) {
+        let response = {
+            success: false,
+            msg: err,
+        };
+        return response
+    }
+    
+}
+
+exports.updateApproval = async function (networkObj, username, org, amount){
+    try {
+        let msp = changeCaseFirstLetter(org)
+        try {
+            await networkObj.contract.evaluateTransaction("UpdateApproval", `${msp},fabric-ca-server,${username}`, amount)
+        } catch (err) {
+            let response = {
+                success: false,
+                msg: err,
+            };
+            return response
+        }
+            await networkObj.contract.submitTransaction("UpdateApproval", `${msp},fabric-ca-server,${username}`, amount)
+        let response = {
+            success: true,
+            msg: "Invoke transaction successfully"
+        }
+        return response
+    } catch (err) {
+        let response = {
+            success: false,
+            msg: err,
+        };
+        return response;
+    }        
+}
+
+exports.transferOwnership = async function (networkObj, username, org){
+    try {
+        let msp = changeCaseFirstLetter(org)
+        try {
+            await networkObj.contract.evaluateTransaction("TransferOwnership", `${msp},fabric-ca-server,${username}`)
+        } catch (err) {
+            let response = {
+                success: false,
+                msg: err,
+            };
+            return response
+        }
+        await networkObj.contract.submitTransaction("TransferOwnership", `${msp},fabric-ca-server,${username}`)
+        let response = {
+            success: true,
+            msg: "Invoke transaction successfully"
+        }
+        return response
+    } catch (err) {
+        let response = {
+            success: false,
+            msg: err,
+        };
+        return response;
+    }        
+}
+
+exports.transfer = async function (networkObj, username, org, amount){
+     try {
+        let msp = changeCaseFirstLetter(org)
+        try {
+            await networkObj.contract.evaluateTransaction("Transfer", `${msp},fabric-ca-server,${username}`, amount)
+        } catch (err) {
+            let response = {
+                success: false,
+                msg: err,
+            };
+            return response
+        }
+        await networkObj.contract.submitTransaction("Transfer", `${msp},fabric-ca-server,${username}`, amount)
+        let response = {
+            success: true,
+            msg: "Invoke transaction successfully"
+        }
+        return response
+    } catch (err) {
+        let response = {
+            success: false,
+            msg: err,
+        };
+        return response;
+    }        
+}
+
+exports.transferFrom = async function (networkObj, spender_username, spender_org, receiver_username, receiver_org, amount){
+     try {
+        let spender_msp = changeCaseFirstLetter(spender_org)
+        let receiver_msp = changeCaseFirstLetter(receiver_org)
+        try {
+            await networkObj.contract.evaluateTransaction("TransferFrom", `${spender_msp},fabric-ca-server,${spender_username}`, `${receiver_msp},fabric-ca-server,${receiver_username}`, amount)
+        } catch (err) {
+            let response = {
+                success: false,
+                msg: err,
+            };
+            return response
+        }
+        await networkObj.contract.submitTransaction("TransferFrom", `${spender_msp},fabric-ca-server,${spender_username}`, `${receiver_msp},fabric-ca-server,${receiver_username}`, amount)
+        let response = {
+            success: true,
+            msg: "Invoke transaction successfully"
+        }
+        return response
+    } catch (err) {
+        let response = {
+            success: false,
+            msg: err,
+        };
+        return response;
+    }        
+}
+
+exports.mint = async function (networkObj, amount){
+    try {
+        try {
+            await networkObj.contract.evaluateTransaction("Mint", amount)
+        } catch (err) {
+            let response = {
+                success: false,
+                msg: err,
+            };
+            return response
+        }
+        await networkObj.contract.submitTransaction("Mint", amount)
+        let response = {
+            success: true,
+            msg: "Invoke transaction successfully"
+        }
+        return response
+    } catch (err) {
+        let response = {
+            success: false,
+            msg: err,
+        };
+        return response;
+    }        
+}
+
+exports.burn = async function(networkObj, amount ){
+    try {
+        try {
+            await networkObj.contract.evaluateTransaction("Burn", amount)
+        } catch (err) {
+            let response = {
+                success: false,
+                msg: err,
+            };
+            return response
+        }
+        await networkObj.contract.submitTransaction("Burn", amount)
+        let response = {
+            success: true,
+            msg: "Invoke transaction successfully"
+        }
+        return response
+    } catch (err) {
+        let response = {
+            success: false,
+            msg: err,
+        };
+        return response;
+    }        
+}
+
+exports.burnFrom = async function(networkObj, burnee_org, burnee_username){
+    try {
+        let burnee_msp = changeCaseFirstLetter(burnee_org)
+        try {
+            await networkObj.contract.evaluateTransaction("BurnFrom", `${burnee_msp},fabric-ca-server,${burnee_username}`, amount)
+        } catch (err) {
+            let response = {
+                success: false,
+                msg: err,
+            };
+            return response
+        }
+            await networkObj.contract.submitTransaction("BurnFrom", `${burnee_msp},fabric-ca-server,${burnee_username}`, amount)
+        let response = {
+            success: true,
+            msg: "Invoke transaction successfully"
+        }
+        return response
+    } catch (err) {
+        let response = {
+            success: false,
+            msg: err,
+        };
+        return response;
+    }        
+}
+
+exports.pause = async function (networkObj){
+     try {
+        try {
+            await networkObj.contract.evaluateTransaction("Pause")
+        } catch (err) {
+            let response = {
+                success: false,
+                msg: err,
+            };
+            return response
+        }
+        await networkObj.contract.submitTransaction("Pause")
+        let response = {
+            success: true,
+            msg: "Invoke transaction successfully"
+        }
+        return response
+    } catch (err) {
+        let response = {
+            success: false,
+            msg: err,
+        };
+        return response;
+    }        
+}
+
+exports.unPause = async function (networkObj){
+     try {
+        try {
+            await networkObj.contract.evaluateTransaction("Unpause")
+        } catch (err) {
+            let response = {
+                success: false,
+                msg: err,
+            };
+            return response
+        }
+        await networkObj.contract.submitTransaction("Unpause")
+        let response = {
+            success: true,
+            msg: "Invoke transaction successfully"
+        }
+        return response
+    } catch (err) {
+        let response = {
+            success: false,
+            msg: err,
+        };
+        return response;
+    }        
+}

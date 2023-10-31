@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: v-tokens-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+    nginx.ingress.kubernetes.io/default-backend: v-tokens-service
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: token.v-chain.vn
+      http:
+        paths:
+        - pathType: Prefix
+          path: /?(.*)
+          backend:
+            service:
+              name: v-tokens-service
+              port:
+                number: 80
+
+

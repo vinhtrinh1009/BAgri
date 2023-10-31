@@ -1,0 +1,27 @@
+version: '3.2'
+
+services:
+  b-agri-back-end:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: b-agri-back-end
+    depends_on:
+      - mongodb
+    restart: always
+    volumes:
+      - bagri-static:/back-end/back_end/static
+    ports:
+      - 8080:8080
+    command: python main.py
+
+  mongodb:
+    image: mongo
+    volumes:
+      - 'mongodb:/data/db'
+    ports:
+      - "27017:27017"
+
+volumes:
+  mongodb:
+  bagri-static:

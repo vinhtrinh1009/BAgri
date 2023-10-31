@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+message {{data.name.capitalize()}} {
+    uint64 timestamp = 1;
+    {% set temp = namespace(index=0) %}
+    {% for attribute in data.attributes %}
+        {% if attribute.proto_type != 'array' %}
+    {{attribute.proto_type}} {{attribute.proto_name}} = {{attribute.indexOf + 1}};
+        {% else %}
+    repeated string {{attribute.proto_name}} = {{attribute.indexOf + 1}};
+        {% endif %}
+    {% endfor %}
+}
+
+message {{data.name.capitalize()}}Container {
+    repeated {{data.name.capitalize()}} entries = 1;
+}

@@ -1,0 +1,56 @@
+version: "3.8"
+
+services:
+    # frontend:
+    #     build: 
+    #         context: ./frontend
+    #         dockerfile: dockerfile
+    #     volumes:
+    #         - ./frontend:/app
+    #         - /app/node_modules/
+    #     environment:
+    #         - CHOKIDAR_USEPOLLING=true
+    #     ports:
+    #         - 3000:3000
+    #     command: npm run start
+    backend:
+        build: 
+            context: ./backend
+            dockerfile: dockerfile
+        command: >
+            sh -c  "python manage.py migrate &&
+                    python run"
+        env_file: 
+            - ./backend/.dev.env
+        volumes:
+            - ./backend:/backend
+        ports: 
+            - 9000:9000
+        depends_on:
+            - db
+            - redis
+    db:
+        image: postgres:13
+        environment:
+            - POSTGRES_DB=
+            - POSTGRES_USER=
+            - POSTGRES_PASSWORD=
+        volumes:
+            - postgres_data:/var/lib/postgresql/data/
+    redis:
+        image: redis
+        volumes:
+            - redis_data:/data
+#   web-server:
+#     image: nginx:1.17-alpine
+#     ports:
+#         - 8000:80
+#     volumes:
+#         - nginx:/etc/nginx/conf.d/
+#     depends_on:
+#         - backend
+#         - frontend
+
+volumes:
+  postgres_data:
+  redis_data:

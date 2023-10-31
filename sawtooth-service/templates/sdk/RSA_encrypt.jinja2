@@ -1,0 +1,43 @@
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import PKCS1_OAEP
+from os.path import exists
+import base64
+import json
+
+class RSACipher:
+
+    def __init__(self, key, namefile): 
+        file_exists = exists(namefile+".bin")
+        if file_exists:
+            try: 
+                encoded_key = open(namefile+".bin", "rb").read()
+                self.keyPair = RSA.import_key(encoded_key, passphrase=key)
+            except: 
+                return False
+        else: 
+            keyTemp = RSA.generate(2048)
+            encrypted_key = keyTemp.export_key(passphrase=key, pkcs=8,
+                                        protection="scryptAndAES128-CBC")
+            file_out = open(namefile+".bin", "wb")
+            file_out.write(encrypted_key)
+            file_out.close()
+            self.keyPair = RSA.import_key(encrypted_key, passphrase=key)
+
+    def encrypt(self, msg):
+        pubKey = self.keyPair.publickey()
+        encryptor = PKCS1_OAEP.new(pubKey)
+        encrypted = encryptor.encrypt(msg.encode('ascii'))
+        encrypted_b64 = base64.b64encode(encrypted)
+        encrypted_b64_string = encrypted_b64.decode()
+        return encrypted_b64_string
+
+    def decrypt(self, ciphertext):
+        try:
+            decryptor = PKCS1_OAEP.new(self.keyPair)
+            message_to_recieve = ciphertext
+            encrypted_b64 = message_to_recieve.encode()
+            encrypted = base64.b64decode(encrypted_b64)
+            decrypted = decryptor.decrypt(encrypted)
+            return decrypted.decode('ascii')
+        except:
+            return False

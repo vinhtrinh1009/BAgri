@@ -1,0 +1,96 @@
+version: '3.6'
+
+volumes:
+  poet-shared:
+
+services:
+  shell:
+    image: hyperledger/sawtooth-shell:chime
+    container_name: sawtooth-shell-default-{{data["number_peer"] + 1}}
+    entrypoint: "bash -c \"\
+        sawtooth keygen && \
+        tail -f /dev/null \
+        \""
+
+  validator-{{data["number_peer"] + 1}}:
+    image: hyperledger/sawtooth-validator:chime
+    container_name: sawtooth-validator-default-{{data["number_peer"] + 1}}
+    expose:
+      - 4004
+      - 5050
+      - 8800
+    ports:
+      - 8800:8800
+    volumes:
+      - poet-shared:/poet-shared
+    command: |
+      bash -c "
+        sawadm keygen --force && \
+        mkdir -p /poet-shared/validator-{{data["number_peer"] + 1}} && \
+        cp -a /etc/sawtooth/keys /poet-shared/validator-{{data["number_peer"] + 1}}/ && \
+        sawtooth-validator -v \
+            --endpoint tcp://{{data["resource_info"]["resource_config"]["host"]}}:8800 \
+            --bind network:tcp://eth0:8800 \
+            --bind component:tcp://eth0:4004 \
+            --bind consensus:tcp://eth0:5050 \
+            --peering static \
+            --peers tcp://{{data["public_ip"]}}:32003 {% for j in range(1,data["number_peer"]) %}--peers tcp://{{data["public_ip"]}}:{{32003+j}} {% endfor %} \
+            --scheduler parallel \
+            --network-auth trust
+      "
+    environment:
+      PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
+        /project/sawtooth-core/consensus/poet/simulator:\
+        /project/sawtooth-core/consensus/poet/core"
+    stop_signal: SIGKILL
+
+  rest-api-{{data["number_peer"] + 1}}:
+    image: hyperledger/sawtooth-rest-api:chime
+    container_name: sawtooth-rest-api-default-{{data["number_peer"] + 1}}
+    expose:
+      - 8008
+    command: |
+      bash -c "
+        sawtooth-rest-api \
+          --connect tcp://validator-{{data["number_peer"] + 1}}:4004 \
+          --bind rest-api-{{data["number_peer"] + 1}}:8008
+      "
+    stop_signal: SIGKILL
+
+  settings-tp-{{data["number_peer"] + 1}}:
+    image: hyperledger/sawtooth-settings-tp:chime
+    container_name: sawtooth-settings-tp-default-{{data["number_peer"] + 1}}
+    expose:
+      - 4004
+    command: settings-tp -v -C tcp://validator-{{data["number_peer"] + 1}}:4004
+    stop_signal: SIGKILL
+
+  poet-engine-{{data["number_peer"] + 1}}:
+    image: hyperledger/sawtooth-poet-engine:chime
+    container_name: sawtooth-poet-engine-{{data["number_peer"] + 1}}
+    volumes:
+      - poet-shared:/poet-shared
+    command: "bash -c \"\
+        while [ ! -f /poet-shared/validator-{{data["number_peer"] + 1}}/keys/validator.priv ]; do sleep 1; done && \
+        cp -a /poet-shared/validator-{{data["number_peer"] + 1}}/keys /etc/sawtooth && \
+        poet-engine -C tcp://validator-{{data["number_peer"] + 1}}:5050 --component tcp://validator-{{data["number_peer"] + 1}}:4004 \
+    \""
+
+  poet-validator-registry-tp-{{data["number_peer"] + 1}}:
+    image: hyperledger/sawtooth-poet-validator-registry-tp:chime
+    container_name: sawtooth-poet-validator-registry-tp-{{data["number_peer"] + 1}}
+    expose:
+      - 4004
+    command: poet-validator-registry-tp -C tcp://validator-{{data["number_peer"] + 1}}:4004
+    environment:
+      PYTHONPATH: /project/sawtooth-core/consensus/poet/common
+    stop_signal: SIGKILL
+    
+  {%  for dapp in data['dapps'] %}
+  {{dapp["dapp_name"]}}processorapp-5:
+    image: registry.gitlab.com/test-application/{{data["user_info"]["username"]}}/{{dapp["dapp_name"]}}/{{dapp["dapp_name"]}}processor:0.0.1
+    container_name: {{dapp["dapp_name"]}}processorapp-5
+    expose:
+      - 4004
+    entrypoint: python3 main.py -vv -C tcp://validator-{{data["number_peer"] + 1}}:4004
+  {%endfor%}

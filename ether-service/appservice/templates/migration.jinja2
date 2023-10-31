@@ -1,0 +1,8 @@
+const Contracts = artifacts.require("./{{data.basic_info.dapp_name | capitalize}}.sol");
+
+module.exports = function (deployer) {
+  deployer.deploy(Contracts).then(() => {
+    const dict = { 'address': Contracts.address };
+    console.log('>>>' + Contracts.address + '>>>')
+  })
+};

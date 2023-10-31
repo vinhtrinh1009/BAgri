@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sawtooth-service
+  labels:
+    app: sawtooth-service
+spec:
+  selector:
+    matchLabels:
+      app: sawtooth-service
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: sawtooth-service
+    spec:
+      containers:
+      - name: sawtooth-service
+        image: registry.gitlab.com/datochain/v-chain/sawtooth-service/service:latest
+        imagePullPolicy: Always
+        command:
+          - bash
+        args:
+          - -c
+          - "cd appservice  && python3 main.py"
+        env:
+          - name: CONFIG_FILE
+            value: product.yaml
+        volumeMounts:
+          - name: sawtooth-service-projects
+            subPath: application
+            mountPath: /sawtooth-service/application
+          - name: sawtooth-service-projects
+            subPath: network
+            mountPath: /sawtooth-service/network
+          - name: sawtooth-service-projects
+            subPath: volume
+            mountPath: /sawtooth-service/volume
+      
+      - name: sawtooth-celery-worker
+        image: registry.gitlab.com/datochain/v-chain/sawtooth-service/celery:latest
+        imagePullPolicy: Always
+        command:
+          - bash
+        args:
+          - -c
+          - "make worker"
+        env:
+          - name: CONFIG_FILE
+            value: product.yaml
+        volumeMounts:
+          - name: sawtooth-service-projects
+            subPath: application
+            mountPath: /sawtooth-service/application
+          - name: sawtooth-service-projects
+            subPath: network
+            mountPath: /sawtooth-service/network
+          - name: sawtooth-service-projects
+            subPath: volume
+            mountPath: /sawtooth-service/volume
+
+      volumes:
+        - name: sawtooth-service-projects
+          persistentVolumeClaim:
+            claimName: sawtooth-service-pvc
+
+      imagePullSecrets:
+      - name: manhld-gitlab-token
+      restartPolicy: Always

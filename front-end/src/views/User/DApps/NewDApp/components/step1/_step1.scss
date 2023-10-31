@@ -1,0 +1,71 @@
+.dapp_step1 {
+    .dapp_img_wrapper {
+        display: flex;
+        justify-content: right;
+        align-items: center;
+
+        .avata_wrapper {
+            width: 227px;
+            height: 227px;
+            position: relative;
+            margin-right: 20px;
+            &:hover {
+                .img_uploaded {
+                    opacity: 0.5;
+                }
+            }
+            .avata_upload {
+                transition: 0.3s;
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: inherit;
+                height: inherit;
+                border-radius: 50%;
+                overflow: hidden;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+            .bg_upload {
+                text-align: center;
+                background-color: #edeff0;
+                .file_image_icon {
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    box-sizing: border-box;
+                    margin: 18px auto;
+                    svg {
+                        width: 50px;
+                        height: 52.8px;
+                    }
+                }
+            }
+            input#drop_zone {
+                cursor: pointer;
+                opacity: 0;
+            }
+        }
+    }
+}
+
+@media (max-width: 768px) {
+    .dapp_step1 {
+        .dapp_img_wrapper {
+            justify-content: center;
+        }
+    }
+}
+
+body.dark-only {
+    .dapp_step1 {
+        .dapp_img_wrapper {
+            .avata_wrapper {
+                .bg_upload {
+                    background-color: #1a1b22;
+                }
+            }
+        }
+    }
+}

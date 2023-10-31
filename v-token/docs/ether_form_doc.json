@@ -1,0 +1,303 @@
+{
+    "dapp_id": "ether-token",
+    "dapp_name": "Token ERC20 for Ethereum network",
+    "dapp_description": "Welcome to the V-Chain Token SDK documentation site! Please note that both the V-Chain platform and this documentation site will improve over time and is still a work-in-progress. Have fun using our SDK!",
+    "folder_tree": [
+      {
+        "name": "token_sdk",
+        "children": [
+          {
+            "name": "build",
+            "description": "",
+            "children": [
+              {
+              "name": "abi",
+              "description": "",
+              "children": [
+                  {
+                  "name": "Token.json",
+                  "description": "Token ABI"
+                  }
+                  ]
+              }
+              ]
+          },
+          {
+            "name": "contracts",
+            "description": "",
+            "children": [
+                {
+                    "name": "Token.sol",
+                    "description": "Token contract code"
+                }
+            ]
+          },
+          {
+            "name": "exceptions.py",
+            "description": "SDK-related exceptions"
+          },
+          {
+            "name": "handler.py",
+            "description": "Token handler"
+          }
+        ]
+      },
+      {
+        "name": "example.py",
+        "description": "Example code to interact with the SDK"
+      },
+      {
+        "name": "requirements.txt",
+        "description": ""
+      }
+    ],
+    "getting_started": [
+      {
+        "instruction": "Install requirement package",
+        "description": "Open Terminal, change directory to SDK folder and run below command",
+        "commands": [
+          {
+            "language": "bash",
+            "command": "pip3 install -r requirements.txt"
+          }
+        ]
+      }
+    ],
+    "functions": [
+          {
+              "name": "handler.name",
+              "description": "Get token name",
+              "parameters": [],
+              "returns": {
+                  "type": "str",
+                  "description": "token name"
+              }
+          },
+          {
+              "name": "handler.symbol",
+              "description": "Get token symbol",
+              "parameters": [],
+              "returns": {
+                  "type": "str",
+                  "description": "token symbol"
+              }
+          },
+          {
+              "name": "handler.cap",
+              "description": "Get token total capacity",
+              "parameters": [],
+              "returns": {
+                  "type": "int|None",
+                  "description": "token total capacity (return None if the token doesn't have max capacity)"
+              }
+          },
+          {
+              "name": "handler.total_supply",
+              "description": "Get token total supply",
+              "parameters": [],
+              "returns": {
+                  "type": "int",
+                  "description": "token total supply"
+              }
+          },
+          {
+              "name": "handler.decimals",
+              "description": "Get token decimals",
+              "parameters": [],
+              "returns": {
+                  "type": "int",
+                  "description": "token decimals"
+              }
+          },
+          {
+              "name": "handler.balance_of",
+              "description": "Get balance of an account",
+              "parameters": [
+                  {
+                      "name": "account",
+                      "type": "address",
+                      "description": "Ethereum address of an account"
+                  }
+              ],
+              "returns": {
+                  "type": "int",
+                  "description": "balance of account"
+              }
+          },
+          {
+              "name": "handler.approve",
+              "description": "Approve another account to use your own tokens",
+              "parameters": [
+                  {
+                      "name": "account",
+                      "type": "address",
+                      "description": "Ethereum address of an account to be approved"
+                  },
+                  {
+                      "name": "amount",
+                      "type": "int",
+                      "description": "Amount of tokens to be approved"
+                  }
+              ],
+              "returns": {
+                  "type": "HexStr",
+                  "description": "transaction hash"
+              }
+          },
+          {
+              "name": "handler.increase_allowance",
+              "description": "Increase allowance of another account to use your own tokens",
+              "parameters": [
+                  {
+                      "name": "account",
+                      "type": "address",
+                      "description": "Ethereum address of an account to be approved"
+                  },
+                  {
+                      "name": "amount",
+                      "type": "int",
+                      "description": "Amount of tokens to be increased"
+                  }
+              ],
+              "returns": {
+                  "type": "HexStr",
+                  "description": "transaction hash"
+              }
+          },
+          {
+              "name": "handler.decrease_allowance",
+              "description": "Decrease allowance of another account to use your own tokens",
+              "parameters": [
+                  {
+                      "name": "account",
+                      "type": "address",
+                      "description": "Ethereum address of an account to be approved"
+                  },
+                  {
+                      "name": "amount",
+                      "type": "int",
+                      "description": "Amount of tokens to be decreased"
+                  }
+              ],
+              "returns": {
+                  "type": "HexStr",
+                  "description": "transaction hash"
+              }
+          },
+          {
+              "name": "handler.transfer",
+              "description": "Transfer tokens to an account",
+              "parameters": [
+                  {
+                      "name": "account",
+                      "type": "address",
+                      "description": "Ethereum address of the beneficiary"
+                  },
+                  {
+                      "name": "amount",
+                      "type": "int",
+                      "description": "Amount of tokens to be transferred"
+                  }
+              ],
+              "returns": {
+                  "type": "HexStr",
+                  "description": "transaction hash"
+              }
+          },
+          {
+              "name": "handler.transfer_from",
+              "description": "3rd-party transfer tokens to an account. 3rd party should be approved to use 1st party tokens first.",
+              "parameters": [
+                  {
+                      "name": "account1",
+                      "type": "address",
+                      "description": "Ethereum address of the sender (1st party)"
+                  },
+                  {
+                      "name": "account2",
+                      "type": "address",
+                      "description": "Ethereum address of the receiver (2nd party)"
+                  },
+                  {
+                      "name": "amount",
+                      "type": "int",
+                      "description": "Amount of tokens to be transferred"
+                  }
+              ],
+              "returns": {
+                  "type": "HexStr",
+                  "description": "transaction hash"
+              }
+          },
+          {
+              "name": "handler.burn",
+              "description": "Burn an amount of tokens. This method is available only if the extension is enabled.",
+              "parameters": [
+                  {
+                      "name": "amount",
+                      "type": "int",
+                      "description": "Amount of tokens to be burned"
+                  }
+              ],
+              "returns": {
+                  "type": "HexStr",
+                  "description": "transaction hash"
+              }
+          },
+          {
+              "name": "handler.mint",
+              "description": "Mint an amount of tokens. Only admin can mint. This method is available only if the extension is enabled.",
+              "parameters": [
+                  {
+                      "name": "account",
+                      "type": "address",
+                      "description": "Ethereum address of the receiver"
+                  },
+                  {
+                      "name": "amount",
+                      "type": "int",
+                      "description": "Amount of tokens to be minted"
+                  }
+              ],
+              "returns": {
+                  "type": "HexStr",
+                  "description": "transaction hash"
+              }
+          },
+          {
+              "name": "handler.pause",
+              "description": "Pause the token. Only admin can pause. This method is available only if the extension is enabled.",
+              "parameters": [],
+              "returns": {
+                  "type": "HexStr",
+                  "description": "transaction hash"
+              }
+          },
+          {
+              "name": "handler.unpause",
+              "description": "Unpause the token. Only admin can unpause. This method is available only if the extension is enabled.",
+              "parameters": [],
+              "returns": {
+                  "type": "HexStr",
+                  "description": "transaction hash"
+              }
+          },
+          {
+              "name": "handler.wait_for_receipt",
+              "description": "Wait for transaction receipt",
+              "parameters": [
+                  {
+                      "name": "tx_hash",
+                      "type": "HexStr",
+                      "description": "transaction hash"
+                  }
+              ],
+              "returns": {
+                  "type": "None",
+                  "description": ""
+              }
+          }
+    ],
+    "username": "V-Chain Team"
+  }
+  

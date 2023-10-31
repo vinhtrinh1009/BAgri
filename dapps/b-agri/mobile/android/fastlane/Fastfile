@@ -1,0 +1,70 @@
+# This file contains the fastlane.tools configuration
+# You can find the documentation at https://docs.fastlane.tools
+#
+# For a list of all available actions, check out
+#
+#     https://docs.fastlane.tools/actions
+#
+# For a list of all available plugins, check out
+#
+#     https://docs.fastlane.tools/plugins/available-plugins
+#
+
+# Uncomment the line if you want fastlane to automatically update itself
+# update_fastlane
+
+default_platform(:android)
+
+platform :android do
+  lane :dxg_apk do
+    Dir.chdir "../.." do
+      sh("flutter", "packages", "get")
+      sh("flutter", "clean")
+      sh("flutter", "build", "apk", "--release", "--flavor", "dxg")
+    end
+    copy_artifacts(
+      artifacts: ['../build/app/outputs/flutter-apk/app-dxg-release.apk'],
+      target_path: './build/apk'
+    )
+  end
+
+  lane :dxg_firebase do
+    Dir.chdir "../.." do
+      sh("flutter", "packages", "get")
+      sh("flutter", "clean")
+      sh("flutter", "build", "apk", "--release", "--flavor", "dxg")
+    end
+    copy_artifacts(
+      artifacts: ['../build/app/outputs/flutter-apk/app-dxg-release.apk'],
+      target_path: './build/apk'
+    )
+    firebase_app_distribution(
+      app: "1:1006750391992:android:d3d243dfbce3932b89de4d",
+      groups: "tester",
+      release_notes: "Môi trường Staging",
+      apk_path: "./build/apk/app-dxg-release.apk",
+      firebase_cli_token:
+      "1//0eXTVsVeraY0WCgYIARAAGA4SNwF-L9IrL1wCPFlfM94gSwFNZFqXNLDkfqd1E2hZGo2MvjxvSEdk-4HzVJNXso5Vq6CTI9wmja8"
+    )
+  end
+
+  lane :nws_firebase do
+    Dir.chdir "../.." do
+      sh("flutter", "packages", "get")
+      sh("flutter", "clean")
+      sh("flutter", "build", "apk", "--release", "--flavor", "nws")
+    end
+    copy_artifacts(
+      artifacts: ['../build/app/outputs/flutter-apk/app-nws-release.apk'],
+      target_path: './build/apk'
+    )
+    firebase_app_distribution(
+      app: "1:868895377674:android:80872ef2981e17994992f3",
+      groups: "newwave",
+      release_notes: "Môi trường Thực hành",
+      apk_path: "./build/apk/app-nws-release.apk",
+      firebase_cli_token:
+      "1//0eXTVsVeraY0WCgYIARAAGA4SNwF-L9IrL1wCPFlfM94gSwFNZFqXNLDkfqd1E2hZGo2MvjxvSEdk-4HzVJNXso5Vq6CTI9wmja8"
+    )
+  end
+end

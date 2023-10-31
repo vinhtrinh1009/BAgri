@@ -1,0 +1,80 @@
+.state {
+    display: flex;
+    align-items: center;
+    div {
+        &:last-child {
+            font: normal normal normal 13px/16px Roboto;
+            opacity: 0.65;
+        }
+    }
+}
+
+.dot-notify {
+    margin-bottom: 0px;
+    margin-right: 5px;
+    border-radius: 50%;
+    width: 9px;
+    height: 9px;
+    // animation: round 1.3s ease-in-out infinite;
+}
+
+.dot-notification-green {
+    background-color: #81dd92;
+}
+.dot-notification-yellow {
+    background-color: #f7c24f;
+}
+.dot-notification-red {
+    background-color: #f5658a;
+}
+.dot-notification-grey {
+    background-color: #b8b8b8;
+}
+//  flex box ---------------------------------------------------------------
+
+.flex_box_row {
+    display: flex;
+    flex-flow: wrap;
+    margin: 0px -15px;
+    .flex_box_col {
+        width: calc(100% / 6);
+        padding: 0px 15px;
+    }
+}
+
+@media (max-width: 118.75em) {
+    .flex_box_row {
+        .flex_box_col {
+            width: calc(100% / 5);
+        }
+    }
+}
+
+@media (max-width: 84.4em) {
+    .flex_box_row {
+        .flex_box_col {
+            width: calc(100% / 4);
+        }
+    }
+}
+@media (max-width: 1080px) and (min-width: 983px) {
+    .flex_box_row {
+        .flex_box_col {
+            width: calc(100% / 3);
+        }
+    }
+}
+@media (max-width: 768px) {
+    .flex_box_row {
+        .flex_box_col {
+            width: calc(100% / 3);
+        }
+    }
+}
+@media (max-width: 540px) {
+    .flex_box_row {
+        .flex_box_col {
+            width: calc(100% / 2);
+        }
+    }
+}

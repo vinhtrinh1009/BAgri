@@ -1,0 +1,9 @@
+{
+    "python.pythonPath": "backend/env/bin/python",
+    "python.analysis.extraPaths": ["./backend"],
+    "python.linting.pylintArgs": [
+        "--load-plugins=pylint_django", "--errors-only",
+        "--disable=django-not-configured",
+        "--django-settings-module=vtokens.settings",
+    ],
+}

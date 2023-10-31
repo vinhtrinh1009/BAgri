@@ -1,0 +1,69 @@
+version: '3.2'
+
+services:
+  appservice_app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        requirements: requirements/development.txt
+    container_name: appservice
+    restart: always
+    volumes:
+      - .:/appService
+    environment:
+      # use in code
+      - SETTINGS_FILE=api.dev.yml
+    command: make dev
+    depends_on:
+#      - elasticsearch
+      - rabbit1
+    ports:
+      - 8080:8080
+#  elasticsearch:
+#    image: docker.elastic.co/elasticsearch/elasticsearch:7.3.1
+#    environment:
+#      - "node.name=es-node"
+#      - "discovery.type=single-node"
+#      - "cluster.name=app-search-docker-cluster"
+#      - "bootstrap.memory_lock=true"
+#      - "ES_JAVA_OPTS=-Xms512m -Xmx2048m"
+#    ulimits:
+#      memlock:
+#        soft: -1
+#        hard: -1
+#    ports:
+#      - 9200:9200
+#    logging:
+#      driver: none
+  celery_worker:
+    build:
+      context: .
+      dockerfile: DockerCeleryfile
+      args:
+        requirements: requirements/development.txt
+    container_name: celery_worker
+    restart: always
+    volumes:
+      - .:/appService
+    environment:
+      # use in code
+      - SETTINGS_FILE=api.dev.yml
+    command: make worker
+    depends_on:
+      - rabbit1
+  rabbit1:
+    image: "rabbitmq:3-management"
+    hostname: "rabbit1"
+    environment:
+      RABBITMQ_ERLANG_COOKIE: "SWQOKODSQALRPCLNMEQG"
+      RABBITMQ_DEFAULT_USER: "rabbitmq"
+      RABBITMQ_DEFAULT_PASS: "rabbitmq"
+      RABBITMQ_DEFAULT_VHOST: "/"
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    labels:
+      NAME: "rabbitmq1"
+    logging:
+      driver: none

@@ -1,0 +1,22 @@
+version: '3.2'
+
+services:
+  sawtooth_service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sawtooth_service
+    restart: always
+    volumes:
+      - .:/sawtooth-service
+    command: bash -c "cd appservice  && python3 main.py"
+
+  sawtooth_celery_worker:
+    build:
+      context: .
+      dockerfile: DockerCeleryfile
+    container_name: sawtooth_celery_worker
+    restart: always
+    volumes:
+      - .:/sawtooth-service
+    command: bash -c "make worker"

@@ -1,0 +1,17 @@
+.vchain_content {
+    padding: 0px 15px;
+    min-height: calc(100vh - 80px);
+    background-color: #f8f8f8;
+}
+
+body.dark-only {
+    .vchain_content {
+        background-color: #1a1b22;
+    }
+}
+
+@media (max-width: 760px) {
+    .vchain_content {
+        padding: 0px;
+    }
+}

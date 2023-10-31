@@ -1,0 +1,115 @@
+/** @format */
+
+"use strict";
+
+const argv = require("yargs").argv;
+const FabricCAServices = require("fabric-ca-client");
+var { Wallets } = require('fabric-network');
+const path = require("path");
+const fs = require("fs");
+
+/**
+ * Register user for org
+ * @param  {String} org  Org Name (default: student)
+ * @param  {String} username User Name (required)
+ */
+
+async function main() {
+  try {
+    let username;
+    let org;
+
+    if (!argv.org) {
+      throw new Error(`org cannot undefined`);
+    } else {
+      org = argv.org.toString();
+    }
+
+    if (!argv.username) {
+      throw new Error(`username cannot undefined`);
+    } else {
+      username = argv.username.toString();
+    }
+
+    let msp = await changeCaseFirstLetter(org);
+    let orgAdmin = "admin" + org;
+
+    const ccpPath = path.resolve(
+        __dirname,
+        "..",
+        "connection-files",
+        `ccp.json`
+      );
+
+    const ccpJSON = fs.readFileSync(ccpPath, "utf8");
+    const ccp = JSON.parse(ccpJSON);
+
+    // Create a new file system based wallet for managing identities.
+    const walletPath = path.join(process.cwd(), `/wallet/wallet-${org}`);
+    const wallet = await Wallets.newFileSystemWallet(walletPath);
+
+    const userIdentity = await wallet.get(username);
+    if (userIdentity) {
+      console.log(
+        `An identity for the user ${username} already exists in the wallet-${org}`
+      );
+      return;
+    }
+
+    let adminIdentity = await wallet.get('admin');
+    if (!adminIdentity) {
+      console.log(`Admin user ${orgAdmin} does not exist in the wallet`);
+      console.log("Run the enrollAdmin.js application before retrying");
+      return;
+    }
+
+    const caInfo = ccp.certificateAuthorities[`ca-org-${org}`];
+    const caTLSCACerts = caInfo.tlsCACerts.pem;
+    const ca = new FabricCAServices(
+      caInfo.url,
+      { trustedRoots: caTLSCACerts, verify: false },
+      caInfo.caName
+    );
+
+    const provider = wallet.getProviderRegistry().getProvider(adminIdentity.type);
+    const adminUser = await provider.getUserContext(adminIdentity, 'admin');
+    let secret;
+    console.log(username)
+    try{
+        secret = await ca.register({ enrollmentID: username, enrollmentSecret: 'passwd', role: 'client', maxEnrollments: -1 }, adminUser);
+        console.log(secret.toString())
+    } catch(error) {
+
+    }
+    const enrollment = await ca.enroll({ enrollmentID: username, enrollmentSecret: secret ? secret.toString() : "passwd" });
+    let x509Identity;
+    x509Identity = {
+      credentials: {
+        certificate: enrollment.certificate,
+        privateKey: enrollment.key.toBytes(),
+      },
+      mspId: msp,
+      type: 'X.509',
+    };
+
+    await wallet.put(username, x509Identity);
+
+    console.log(
+      `Successfully registered and enrolled user ${username} - ${secret ? secret : "passwd"} and imported it into the wallet`
+    );
+
+    process.exit(0);
+  } catch (error) {
+    console.error(`Failed to register user: ${error}`);
+    process.exit(1);
+  }
+}
+
+function changeCaseFirstLetter(params) {
+  if (typeof params === "string") {
+    return params.charAt(0).toUpperCase() + params.slice(1) + "MSP";
+  }
+  return null;
+}
+
+main();

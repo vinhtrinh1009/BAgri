@@ -1,0 +1,29 @@
+stages:
+  - build
+
+build:
+  stage: build
+  image: docker:latest
+  only:
+    - "develop"
+  services:
+    - docker:dind
+  variables:
+    DOCKER_DRIVER: "overlay"
+  retry: 2
+  before_script:
+    - apk add --no-cache curl
+    - docker version
+    - "docker info"
+    - "docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $CI_REGISTRY"
+  script:
+    - "docker image pull ${CI_REGISTRY}/${CI_PROJECT_PATH}/service:latest || true"
+    - "docker build -t ${CI_REGISTRY}/${CI_PROJECT_PATH}/service:latest --cache-from ${CI_REGISTRY}/${CI_PROJECT_PATH}/service:latest ."
+    - "docker push ${CI_REGISTRY}/${CI_PROJECT_PATH}/service:latest"
+    - "docker image pull ${CI_REGISTRY}/${CI_PROJECT_PATH}/celery:latest || true"
+    - "docker build -f DockerCeleryfile -t ${CI_REGISTRY}/${CI_PROJECT_PATH}/celery:latest --cache-from ${CI_REGISTRY}/${CI_PROJECT_PATH}/celery:latest ."
+    - "docker push ${CI_REGISTRY}/${CI_PROJECT_PATH}/celery:latest"
+  after_script:
+    - "docker logout ${CI_REGISTRY}"
+
+

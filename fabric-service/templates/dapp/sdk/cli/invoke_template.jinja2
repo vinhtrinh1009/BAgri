@@ -1,0 +1,74 @@
+/** @format */
+
+"use strict";
+
+const argv = require("yargs").argv;
+const conn = require("../fabric/network");
+const uuidv4 = require("uuid/v4");
+
+/**
+ * Invoke function of chaincode
+ * @param  {String} orgMSP  Org Name (default: student)
+ * @param  {String} func  Function Name (required)
+ * @param  {String} username User Name (required)
+ */
+
+async function main() {
+    try {
+        if (!argv.func || !argv.username || !argv.org) {
+        console.log(`Parameter func or username or org cannot undefined`);
+        return;
+    }
+
+    let func = argv.func.toString();
+    let username = argv.username.toString();
+    let org = argv.org.toString();
+
+    const networkObj = await conn.connectToNetwork(org, username, true);
+{% for entity in data['entities'] %}
+    {% if loop.first %}
+    if (func === "Create{{entity['name']}}"){
+    {% else %}
+    if (func === "Create{{entity['name']}}"){
+    {% endif %}
+        {% for attribute in entity['attributes'] %}
+        let {{attribute['name']}} = argv.{{attribute['name']}}.toString();
+        {% endfor %}
+
+        let {{entity['name']}}Created = {
+            {% for attribute in entity['attributes'] %}
+            {{attribute['name']}}: argv.{{attribute['name']}}.toString(),
+            {% endfor %}
+        };
+
+        await conn.Create{{entity['name']}}(networkObj, {{entity['name']}}Created);
+    }else if (func === "Update{{entity['name']}}"){
+        {% for attribute in entity['attributes'] %}
+        let {{attribute['name']}} = argv.{{attribute['name']}}.toString();
+        {% endfor %}
+
+        let {{entity['name']}}Updated = {
+            {% for attribute in entity['attributes'] %}
+            {{attribute['name']}}: argv.{{attribute['name']}}.toString(),
+            {% endfor %}
+        };
+
+        await conn.Update{{entity['name']}}(networkObj, {{entity['name']}}Updated);
+    }else if (func === "Delete{{entity['name']}}"){
+        let {{entity['primary_key']}} = argv.{{entity['primary_key']}}.toString();
+
+        await conn.Delete{{entity['name']}}(networkObj, {{entity['primary_key']}});
+    }
+  {% endfor %}
+    } else {
+      console.log("Failed!");
+      process.exit(0);
+    }
+    console.log('Transaction has been submitted');
+  } catch (error) {
+    console.error(`Failed to submit transaction: ${error}`);
+    process.exit(1);
+  }
+}
+
+main();

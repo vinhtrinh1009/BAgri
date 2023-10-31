@@ -1,0 +1,7 @@
+venv
+.idea
+*__pycache__*
+back_end/static/uploaded/**
+!back_end/static/uploaded/.gitkeep
+back_end/static/qr_codes/**
+!back_end/static/qr_codes/.gitkeep

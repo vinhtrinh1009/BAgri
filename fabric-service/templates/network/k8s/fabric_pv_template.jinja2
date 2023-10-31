@@ -1,0 +1,18 @@
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: fabric-pv
+  labels:
+    type: local
+    name: fabric-files
+spec:
+  capacity:
+    storage: 1Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    path: /var/nfs/fabric-service/projects/{{data['username']}}/{{data['network_id']}}
+    server: localhost
+    readOnly: false

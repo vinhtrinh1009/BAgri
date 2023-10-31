@@ -1,0 +1,11 @@
+version: '3.8'
+services:
+  frontend:
+    build: .
+    container_name: verifier_frontend
+    image: verifier-frontend:1.0
+    ports:
+      - "3002:3002"
+    volumes:
+      - ./:/app
+      - /app/node_modules

@@ -1,0 +1,25 @@
+body {
+    .MuiButton-root {
+        font-size: 14px;
+        border-radius: 6px;
+        text-transform: unset;
+        box-shadow: none;
+        .MuiButton-label {
+            white-space: nowrap;
+        }
+    }
+    .MuiButton-containedPrimary:not(.Mui-disabled) {
+        color: #fff;
+        background-color: #1998f4;
+    }
+    .MuiButton-outlinedPrimary {
+        color: #1998f4;
+        border: 1px solid #c4e6ff;
+        &:hover {
+            border-color: #1998f4 !important ;
+        }
+    }
+    .MuiButton-textPrimary {
+        color: #1998f4;
+    }
+}

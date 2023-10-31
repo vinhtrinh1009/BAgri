@@ -1,0 +1,62 @@
+@import "common/CardFolder/GirdViewMode/card_grid_view_mode";
+@import "common/CardFolder/ListViewMode/card_list_view_mode";
+@import "common/StoragesData/storages_data";
+@import "common/ActionButton/action_button";
+@import "MyStorage/my_storage";
+
+.action_part {
+    .action_part_search_bar {
+        border: 1px solid #ededed;
+        border-radius: 11px;
+        display: flex;
+        align-items: center;
+        height: 64px;
+        background: #ffffff;
+        width: 100%;
+        &_icon {
+            cursor: pointer;
+            margin-left: 17px;
+            width: 26px;
+            height: 26px;
+            opacity: 0.65;
+            &:hover {
+                color: #1998f4;
+                opacity: 1;
+            }
+        }
+        input[type="text"] {
+            border: none;
+            outline: none;
+            padding: 10px;
+            background: none;
+            font: 18px/21px Roboto;
+            width: 100%;
+        }
+    }
+}
+.storage_icon_function {
+    display: inline-flex;
+    width: 40px;
+    height: 40px;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    border-radius: 10px;
+    color: #9b9b9b;
+    &:hover {
+        background: #ebf6ff;
+        color: #1998f4;
+    }
+}
+
+body.dark-only {
+    .action_part {
+        .action_part_search_bar {
+            background: #262932;
+            border: 1px solid #15161c;
+            input[type="text"] {
+                color: white;
+            }
+        }
+    }
+}

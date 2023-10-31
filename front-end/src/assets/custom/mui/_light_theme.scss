@@ -1,0 +1,71 @@
+body.light {
+    .MuiFormControl-root {
+        border-top-left-radius: 7px !important;
+        border-top-right-radius: 7px !important;
+    }
+    .MuiFormControl-root {
+        .MuiFilledInput-root {
+            background: #f4f7fa !important;
+            // border-top: 6px !important;
+            &:hover {
+                background: #f4f7fa;
+            }
+            &.Mui-focused {
+                background: #f4f7fa;
+            }
+        }
+    }
+
+    .MuiStepper-root {
+        .MuiStepConnector-line {
+            border-top-width: 3px;
+            border-color: #dddddd;
+            border-radius: 10px;
+        }
+        .MuiStep-root {
+            .MuiStepLabel-label {
+                font-size: 16px;
+            }
+            svg.MuiSvgIcon-root {
+                color: #dddddd;
+                width: 30px;
+                height: 30px;
+                text.MuiStepIcon-text {
+                    fill: #7e7e7e;
+                }
+            }
+        }
+        .MuiStep-root.Mui-completed {
+            svg.MuiSvgIcon-root.Mui-completed {
+                color: #87db97 !important;
+            }
+        }
+        .active_step {
+            .MuiStepLabel-iconContainer {
+                position: relative;
+                &::before,
+                &::after {
+                    border: 3px solid #87db97;
+                    content: "";
+                    position: absolute;
+                    display: block;
+                    width: 30px;
+                    height: 30px;
+                    border-radius: 50%;
+                    animation: ffload 1.5s infinite;
+                }
+                &::after {
+                    animation-delay: 0.75s;
+                }
+            }
+        }
+        .MuiStepConnector-root {
+            &.Mui-active,
+            &.Mui-completed {
+                .MuiStepConnector-line {
+                    border-color: #87db97;
+                }
+            }
+        }
+    }
+}

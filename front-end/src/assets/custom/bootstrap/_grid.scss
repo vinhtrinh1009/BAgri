@@ -1,0 +1,16 @@
+@media (min-width: 1920px) {
+    .col_xll_20p {
+        max-width: 20% !important;
+    }
+}
+
+@media (min-width: 1400px) {
+    .col-xxl-3 {
+        flex: 0 0 25%;
+        max-width: 25%;
+    }
+    .col-xxl-9 {
+        flex: 0 0 75%;
+        max-width: 75%;
+    }
+}

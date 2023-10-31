@@ -1,0 +1,10 @@
+ipfs:
+  host: 127.0.01
+  port: 8000
+
+mongodb:
+  url: 
+  db_name: 
+
+jwt_key: 
+domain: 

@@ -1,0 +1,40 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: explorer-{{data['network_id']}}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 30008
+      targetPort: 30008
+---
+kind: Endpoints
+apiVersion: v1
+metadata:
+  name: explorer-{{data['network_id']}}
+subsets:
+  - addresses:
+      - ip: {{data['ingress_ip']}}
+    ports:
+      - port: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: explorer-{{data['network_id']}}
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/default-backend: explorer-{{data['network_id']}}
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: explorer.v-chain.vn
+      http:
+        paths:
+        - pathType: Prefix
+          path: /explorer/{{data['network_id']}}(/|$)(.*)
+          backend:
+            service:
+              name: explorer-{{data['network_id']}}
+              port:
+                number: 30008

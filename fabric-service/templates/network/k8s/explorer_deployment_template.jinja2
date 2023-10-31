@@ -1,0 +1,111 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: explorer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: explorer
+  template:
+    metadata:
+      labels:
+        app: explorer
+    spec:
+      volumes:
+      - name: client-build
+        emptyDir: {}
+      - name: fabric-files
+        persistentVolumeClaim:
+          claimName: fabric-pvc
+
+      initContainers:
+      - name: client-builder-yarn
+        image: m4nhb4nhq/fabric-explorer-client:latest
+        imagePullPolicy: Always
+        command: [sh, -c]
+        args: ["find /client/build -type f -exec sed -i 's/thisisnetworkidthatneedtobereplaced/{{data['network_id']}}/g' {} + && cp -R /client/build/* /truebuild"]
+        volumeMounts:
+          - name: client-build
+            mountPath: /truebuild
+
+      containers:
+      - name: explorer
+        image: hyperledger/explorer:latest
+        env:
+        - name: DATABASE_DATABASE
+          value: fabricexplorer
+        - name: DATABASE_HOST
+          value: explorer-db
+        - name: DATABASE_PORT
+          value: "5432"
+        - name: DATABASE_PASSWD
+          value: password
+        - name: DATABASE_USERNAME
+          value: hppoc
+        - name: DISCOVERY_AS_LOCALHOST
+          value: "false"
+        - name: LOG_CONSOLE_STDOUT
+          value: "true"
+        - name: LOG_LEVEL_APP
+          value: debug
+        - name: LOG_LEVEL_CONSOLE
+          value: info
+        - name: LOG_LEVEL_DB
+          value: debug
+
+        volumeMounts:
+        - mountPath: /fabric/crypto-config
+          name: fabric-files
+          subPath: crypto-config
+        - mountPath: /opt/explorer/app/explorerconfig.json
+          name: fabric-files
+          subPath: config/explorer/explorerconfig.json
+        - mountPath: /opt/explorer/app/platform/fabric/config.json
+          name: fabric-files
+          subPath: config/explorer/config.json
+        - mountPath: /opt/explorer/app/platform/fabric/connection-profile
+          name: fabric-files
+          subPath: config/explorer/connection-profile
+        - mountPath: /opt/explorer/wallet
+          name: fabric-files
+          subPath: explorer/wallet
+        - mountPath: /opt/explorer/client/build
+          name: client-build
+        
+        ports:
+        - containerPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: explorer-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: explorer-db
+  template:
+    metadata:
+      labels:
+        app: explorer-db
+    spec:
+      volumes:
+      - name: fabric-files
+        persistentVolumeClaim:
+          claimName: fabric-pvc
+
+      containers:
+      - name: explorer-db
+        image: hyperledger/explorer-db:latest
+        env:
+        - name: DATABASE_DATABASE
+          value: fabricexplorer
+        - name: DATABASE_USERNAME
+          value: hppoc
+        - name: DATABASE_PASSWORD
+          value: password
+        volumeMounts:
+          - mountPath: /var/lib/postgresql/data
+            name: fabric-files
+            subPath: explorer/data

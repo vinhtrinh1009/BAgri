@@ -1,0 +1,39 @@
+database:
+  db_name: 
+  username: 
+  password: 
+  port: 
+  host: 
+
+rabbitmq:
+  username: 
+  password: 
+  host: 
+  port:
+
+account_service:
+  host: 
+  username: 
+  password: 
+
+docs_service:
+  host: 
+
+v_storage:
+  host: 
+
+k8s:
+  token:  
+
+peer:
+  public_ip: 
+
+jwt_key: 
+
+gitlab:
+  private_token: 
+  dapp_group_id: 
+
+gitlab_pull_dapp_image:
+  username: 
+  password: 

@@ -1,0 +1,51 @@
+{
+  "name": "{{data['network_name']}}-{{data['org_name']}}",
+  "version": "1.0.0",
+  "client": {
+    "organization": "{{data['org_name']|capitalize}}",
+    "connection": {
+      "timeout": {
+        "peer": {
+          "endorser": "300"
+        }
+      }
+    }
+  },
+  "organizations": {
+    "{{data['org_name']|capitalize}}": {
+      "mspid": "{{data['org_name']|capitalize}}MSP",
+      "peers": [
+        {% for peer_index in range(data['number_peer']) %}
+        "peer{{peer_index}}-{{data['org_name']}}"{% if not loop.last %},{% endif %}
+        {% endfor %}
+			],
+      "certificateAuthorities": ["ca-{{ data['network_name'] }}"]
+    }
+  },
+  "peers": {
+    {% for peer_index in range(data['number_peer']) %}
+    "peer{{peer_index}}-{{data['org_name']}}": {
+      "url": "grpcs://peer{{peer_index}}-{{data['org_name']}}:7051",
+      "tlsCACerts": {
+        "pem": "{{data['peer_pem']}}"
+      },
+      "grpcOptions": {
+        "ssl-target-name-override": "peer{{peer_index}}-{{data['org_name']}}",
+        "hostnameOverride": "peer{{peer_index}}-{{data['org_name']}}"
+      }
+    }{% if not loop.last %},{% endif %}
+  {% endfor %}
+  },
+  "certificateAuthorities": {
+    "ca-{{ data['org_name'] }}": {
+      "url": "https://ca-{{ data['org_name'] }}:7054",
+      "caName": "ca-{{ data['org_name'] }}",
+      "tlsCACerts": {
+        "pem": "{{data['ca_pem']}}"
+      },
+      "httpOptions": {
+        "verify": false
+      }
+    }
+  }
+}

@@ -1,0 +1,7 @@
+[submodule "frontend"]
+	path = frontend
+	url = git@gitlab.com:datochain/v-chain/front-end-v2.git
+	branch = vtokens
+[submodule "vchain_fabric_bridge"]
+	path = vchain_fabric_bridge
+	url = git@github.com:dunglee30/vchain_fabric_bridge.git

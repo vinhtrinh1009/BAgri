@@ -1,0 +1,42 @@
+.head_table {
+    margin: 10px 0px;
+}
+.card_list_view_mode {
+    height: 76px;
+    border-radius: 12px;
+    background-color: #f9f9fc;
+    align-items: center;
+    cursor: pointer;
+    margin: 10px 0px;
+    transition: 0.15s;
+
+    &:hover {
+        background-color: #ebf6ff;
+    }
+    &.activeItem {
+        background-color: #dcefff;
+    }
+    .card_list_view_mode_name {
+        display: flex;
+        align-items: center;
+        .card_list_view_mode_icon {
+            margin-right: 16px;
+            color: #717171;
+        }
+    }
+    .card_list_view_mode_data {
+        opacity: 0.5;
+    }
+}
+
+body.dark-only {
+    .card_list_view_mode {
+        background-color: #2f333e;
+        &:hover {
+            background-color: #15344c;
+        }
+        &.activeItem {
+            background-color: #004478;
+        }
+    }
+}

@@ -1,0 +1,36 @@
+.manage_resource {
+    .resource_table {
+        overflow: auto;
+        .header_table {
+            margin: 10px 0px;
+            width: 100%;
+            min-width: 900px;
+            font-weight: bold;
+        }
+        .row_table {
+            width: 100%;
+            min-width: 900px;
+            height: 70px;
+            border-radius: 8px;
+            background-color: #f9f9fc;
+            align-items: center;
+            margin: 10px 0px;
+            &:hover {
+                background-color: #ebf6ff;
+            }
+        }
+    }
+}
+
+body.dark-only {
+    .manage_resource {
+        .resource_table {
+            .row_table {
+                background-color: #2f333e;
+                &:hover {
+                    background-color: #15344c;
+                }
+            }
+        }
+    }
+}

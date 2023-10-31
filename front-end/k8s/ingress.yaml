@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: front-end-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+    nginx.ingress.kubernetes.io/default-backend: front-end-service
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: platform.v-chain.vn
+      http:
+        paths:
+        - pathType: Prefix
+          # path: /^((?!home).)*$
+          path: /?(.*)
+          backend:
+            service:
+              name: front-end-service
+              port:
+                number: 80
+
+

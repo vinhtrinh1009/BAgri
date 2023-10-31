@@ -1,0 +1,26 @@
+[
+    {
+        "name": "Ethereum Main Network",
+        "network_id": 1,
+        "chain_id": 1,
+        "url": "https://mainnet.infura.io/v3/471feaea77474ee3b952e9e9892cbe9c"
+    },
+    {
+        "name": "Rinkeby Test Network",
+        "network_id": 4,
+        "chain_id": 4,
+        "url": "https://rinkeby.infura.io/v3/471feaea77474ee3b952e9e9892cbe9c"
+    },
+    {
+        "name": "Ropsten Test Network",
+        "network_id": 3,
+        "chain_id": 3,
+        "url": "https://ropsten.infura.io/v3/471feaea77474ee3b952e9e9892cbe9c"
+    },
+    {
+        "name": "Goerli Test Network",
+        "network_id": 5,
+        "chain_id": 5,
+        "url": "https://goerli.infura.io/v3/471feaea77474ee3b952e9e9892cbe9c"
+    }
+]

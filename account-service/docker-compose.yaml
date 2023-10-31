@@ -1,0 +1,18 @@
+version: '3.2'
+
+services:
+  account-service:
+    image: ducdm99tb/account-service:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: account-service
+    restart: always
+    volumes:
+      - .:/account-service
+    environment:
+      # use in code
+      - CONFIG_FILE=develop.yaml
+    ports:
+      - 8080:8080
+    command: gunicorn -w 1 main:app --bind 0.0.0.0:8080 --timeout 120 --graceful-timeout 120

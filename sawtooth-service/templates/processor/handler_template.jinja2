@@ -1,0 +1,113 @@
+import datetime
+import time
+import logging
+
+from sawtooth_sdk.processor.handler import TransactionHandler
+from sawtooth_sdk.processor.exceptions import InvalidTransaction
+
+from addressing import addresser
+
+from protobuf import payload_pb2
+{%for entity in data.entities%}
+from protobuf import {{entity.name}}_pb2
+{%endfor%}
+from payload import DappPayload
+from state import DappState
+
+SYNC_TOLERANCE = 60 * 5
+
+class DappHandler(TransactionHandler):
+
+    @property
+    def family_name(self):
+        return addresser.FAMILY_NAME
+
+    @property
+    def family_versions(self):
+        return [addresser.FAMILY_VERSION]
+
+    @property
+    def namespaces(self):
+        return [addresser.NAMESPACE]
+
+    def apply(self, transaction, context):
+        payload = DappPayload(transaction.payload)
+        state = DappState(context)
+
+        _validate_timestamp(payload.timestamp)
+
+    {%for function in (data.functions.create_functions + data.functions.update_functions)%}
+        {%if loop.index == 1%}
+        if payload.action == payload_pb2.DappPayload.{{function.name|upper}}:
+        {%else%}
+        elif payload.action == payload_pb2.DappPayload.{{function.name|upper}}:
+        {%endif%}
+            _{{function.name}}(
+                state=state,
+                payload=payload
+            )
+    {%endfor%}
+        else:
+            raise InvalidTransaction('Unhandled action')
+
+{%for function in data.functions.create_functions%}
+def _{{function.name}}(state, payload):
+    {%for field in function.required_fields%}
+    if payload.data.{{field}} == '':
+        raise InvalidTransaction('No {{field}} provided')
+    {%endfor%}
+
+    if state.get_{{function.entity_name}}(payload.data.{{function.entity_primary_key}}):
+        raise InvalidTransaction('Identifier {} belongs to an existing {{function.entity_name}}'.format(payload.data.{{function.entity_primary_key}}))
+    
+    state.{{function.name}}(
+        timestamp=payload.timestamp,
+        {%for param in function.params%}
+        {%if not param.encrypt %}
+        {{param.name}}=payload.data.{{param.proto_name}}{{"," if not loop.last}}
+        {%endif%}
+        {%endfor%}
+        {%if function.has_encrypt %}
+        ,encrypt_data=payload.data.encrypt_data
+        {%endif%}
+    )
+
+
+{%endfor%}
+{%for function in data.functions.update_functions%}
+def _{{function.name}}(state, payload):
+    {%for field in function.required_fields%}
+    if payload.data.{{field}} == '':
+        raise InvalidTransaction('No {{field}} provided')
+    {{function.entity_name}} = state.get_{{function.entity_name}}(payload.data.{{function.entity_primary_key}})
+    {%endfor%}
+    if {{function.entity_name}} is None:
+        raise InvalidTransaction('{{function.entity_name}} with the id {} does not exist'.format(payload.data.{{function.entity_primary_key}}))
+
+    state.{{function.name}}(
+        timestamp=payload.timestamp,
+        {%for param in function.params%}
+        {%if not param.encrypt %}
+        {{param.name}}=payload.data.{{param.proto_name}}{{"," if not loop.last}}
+        {%endif%}
+        {%endfor%}
+        {%if function.has_encrypt %}
+        ,encrypt_data=payload.data.encrypt_data
+        {%endif%}
+    )
+{%endfor%}
+
+def _validate_timestamp(timestamp):
+    """Validates that the client submitted timestamp for a transaction is not
+    greater than current time, within a tolerance defined by SYNC_TOLERANCE
+
+    NOTE: Timestamp validation can be challenging since the machines that are
+    submitting and validating transactions may have different system times
+    """
+    dts = datetime.datetime.utcnow()
+    current_time = round(time.mktime(dts.timetuple()) + dts.microsecond/1e6)
+    if (timestamp - current_time) > SYNC_TOLERANCE:
+        raise InvalidTransaction(
+            'Timestamp must be less than local time.'
+            ' Expected {0} in ({1}-{2}, {1}+{2})'.format(
+                timestamp, current_time, SYNC_TOLERANCE))

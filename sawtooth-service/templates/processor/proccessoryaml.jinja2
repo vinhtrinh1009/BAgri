@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: List
+
+items:
+{%for peer_index in range(0,data['basic_info']['number_peer']) %}
+  - kind: Deployment
+    apiVersion: apps/v1
+    metadata:
+      name: {{ data.basic_info.dapp_name  }}processorapp-{{peer_index}}
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          app:  {{ data.basic_info.dapp_name  }}processorapp-{{peer_index}}
+      template:
+        metadata:
+          labels:
+            app:  {{ data.basic_info.dapp_name  }}processorapp-{{peer_index}}
+        spec:
+          containers:
+            - name:  {{ data.basic_info.dapp_name  }}processorapp-{{peer_index}}
+              image: registry.gitlab.com/test-application/{{ data.basic_info.username }}/{{ data.basic_info.dapp_name  }}/{{ data.basic_info.dapp_name  }}processor:0.0.1
+              imagePullPolicy: Always
+              ports:
+                - containerPort: 8080
+              command: ["python3", "main.py", "-C", "tcp://sawtooth-{{peer_index}}:4004"]
+          imagePullSecrets:
+            - name: deploy-{{ data.basic_info.dapp_name  }}processor-secrets
+          restartPolicy: Always
+{%endfor%}
+
+
+

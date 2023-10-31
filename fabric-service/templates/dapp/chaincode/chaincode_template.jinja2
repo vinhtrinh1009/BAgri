@@ -1,0 +1,428 @@
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"github.com/hyperledger/fabric-chaincode-go/shim"
+	"github.com/hyperledger/fabric-contract-api-go/contractapi"
+)
+
+type SmartContract struct {
+	contractapi.Contract
+}
+{% set vars = data['variables']%}
+{% for e in data['entities'] %}
+{% set entity = data['entities'][e] %}
+type {{entity['name']}} struct {
+  {% for a in entity['attributes'] %}
+		{% set attribute = entity['attributes'][a] %}
+	Attr_{{attribute['name']}} {{attribute['type']}} `json:"attr_{{attribute['name']}}"`
+	{% endfor %}
+	{% if entity['privates'] or entity['files']%}
+	Priv_data string `json:"priv_data"`
+	{% endif %}
+	{% for relationship in data['relationships'][e] %}
+	{% set r = data['relationships'][e][relationship] %}
+	{% set targetObj = data['entities'][r['name']] %}
+	{% set primaryKey = targetObj['attributes'][targetObj['primary_key']] %}
+		{% if r['type'] == "1" %}
+	Rela_{{r['name']}} {{primaryKey['type']}} `json:"rela_{{r['name']}}"`
+		{% elif r['type'] == "n" %}
+	Rela_{{r['name']}}s []{{primaryKey['type']}} `json:"rela_{{r['name']}}s"`
+		{% endif %}
+	{% endfor %}
+}
+
+func ({{vars['s']}} *SmartContract) Create{{entity['name']}}(ctx contractapi.TransactionContextInterface,{% for a in entity['attributes'] %} {% set attribute = entity['attributes'][a] %} _{{attribute['name']}} {{attribute['type']}}{{ "," if not loop.last }}{% endfor %}{% if entity['privates'] or entity['files']%}, {{vars['priv_data']}} string{% endif %}) error {
+	{{vars['objId']}} := _{{entity['primary_key']}} + "{{entity['name']}}"
+	exists, {{vars['err']}} := {{vars['s']}}.objectExists(ctx, {{vars['objId']}})
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+	if exists {
+		return fmt.Errorf("the {{entity['name']}} %s already exists", _{{entity['primary_key']}})
+	}
+
+	newObj := {{entity['name']}}{
+    {% for a in entity['attributes'] %}
+		{% set attribute = entity['attributes'][a] %}
+	  Attr_{{attribute['name']}}: _{{attribute['name']}},
+		{% endfor %}
+		{% if entity['privates'] or entity['files'] %}
+	  Priv_data: {{vars['priv_data']}},
+		{% endif %}
+		{% for relationship in data['relationships'][entity['name']] %}
+		{% set r = data['relationships'][e][relationship] %}
+		{% set targetObj = data['entities'][r['name']] %}
+		{% set primaryKey = targetObj['attributes'][targetObj['primary_key']] %}
+			{% if r['type'] == "n" %}
+		Rela_{{r['name']}}s: make([]{{primaryKey['type']}}, 0),
+			{% endif %}
+		{% endfor %}
+	}
+	newObjJSON, {{vars['err']}} := json.Marshal(newObj)
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+
+	return ctx.GetStub().PutState({{vars['objId']}}, newObjJSON)
+}
+
+func ({{vars['s']}} *SmartContract) Read{{entity['name']}}(ctx contractapi.TransactionContextInterface, _{{entity['primary_key']}} string) (*{{entity['name']}}, error) {
+	{{vars['objId']}} := _{{entity['primary_key']}} + "{{entity['name']}}"
+	{{vars['objJSON']}}, {{vars['err']}} := ctx.GetStub().GetState({{vars['objId']}})
+	if {{vars['err']}} != nil {
+		return nil, fmt.Errorf("failed to read from world state: %v", {{vars['err']}})
+	}
+	if {{vars['objJSON']}} == nil {
+		return nil, fmt.Errorf("the {{entity['name']}} %s does not exist", _{{entity['primary_key']}})
+	}
+
+	var {{vars['result']}} {{entity['name']}}
+	{{vars['err']}} = json.Unmarshal({{vars['objJSON']}}, &{{vars['result']}})
+	if {{vars['err']}} != nil {
+		return nil, {{vars['err']}}
+	}
+
+	return &{{vars['result']}}, nil
+}
+
+func ({{vars['s']}} *SmartContract) Update{{entity['name']}}(ctx contractapi.TransactionContextInterface,{% for a in entity['attributes'] %}{% set attribute = entity['attributes'][a] %} _{{attribute['name']}} {{attribute['type']}}{{ "," if not loop.last }}{% endfor %}{% if entity['privates'] or entity['files']%}, {{vars['priv_data']}} string{% endif %}) error {
+	{{vars['obj']}}, {{vars['err']}} := {{vars['s']}}.Read{{entity['name']}}(ctx, _{{entity['primary_key']}})
+
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+
+	// overwriting original asset with new asset
+	{% for a in entity['attributes'] %}
+	{% set attribute = entity['attributes'][a] %}
+	{% if attribute['name'] != entity['primary_key'] %}
+	{{vars['obj']}}.Attr_{{attribute['name']}} = _{{attribute['name']}}
+	{% endif %}
+	{% endfor %}
+	{% if entity['privates'] %}
+	{{vars['obj']}}.Priv_data = {{vars['priv_data']}}
+	{% endif %}
+
+	{{vars['updateObjJSON']}}, {{vars['err']}} := json.Marshal({{vars['obj']}})
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+
+	return ctx.GetStub().PutState(_{{entity['primary_key']}} + "{{entity['name']}}", {{vars['updateObjJSON']}})
+}
+
+func ({{vars['s']}} *SmartContract) Delete{{entity['name']}}(ctx contractapi.TransactionContextInterface, _{{entity['primary_key']}} string) error {
+	{{vars['obj']}}, {{vars['err']}} := {{vars['s']}}.Read{{entity['name']}}(ctx, _{{entity['primary_key']}})
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+
+	{% for relationship in data['relationships'][entity['name']] %}
+	{% set r = data['relationships'][e][relationship] %}
+	{% set r2 = data['relationships'][r['name']][entity['name']] %}
+		{% if r['type'] == "1"%}
+	if {{vars['obj']}}.Rela_{{r['name']}} != ""{
+			{% if r2['type'] == "1" %}
+		{{vars['err']}} = {{vars['s']}}.Unset{{entity['name']}}for{{r['name']}}(ctx, {{vars['obj']}}.Rela_{{r['name']}})
+		if {{vars['err']}} != nil {
+			return {{vars['err']}}
+		}
+			{% elif r2['type'] == "n" %}
+		{{vars['err']}} = {{vars['s']}}.Remove{{entity['name']}}for{{r['name']}}(ctx, {{vars['obj']}}.Rela_{{r['name']}}, _{{entity['primary_key']}})
+		if {{vars['err']}} != nil {
+			return {{vars['err']}}
+		}
+			{% endif %}
+	}
+		{% elif r['type'] == "n" %}
+	for _, id := range {{vars['obj']}}.Rela_{{r['name']}}s {
+			{% if r2['type'] == "1" %}
+		{{vars['err']}} = {{vars['s']}}.Unset{{entity['name']}}for{{r['name']}}(ctx, id)
+			{% elif r2['type'] == "n" %}
+		{{vars['err']}} = {{vars['s']}}.Remove{{entity['name']}}for{{r['name']}}(ctx, id, _{{entity['primary_key']}})
+			{% endif %}
+		if {{vars['err']}} != nil {
+			return {{vars['err']}}
+		}
+	}
+		{% endif %}
+	{% endfor%}
+
+	return ctx.GetStub().DelState({{vars['obj']}}.Attr_{{entity['primary_key']}} + "{{entity['name']}}")
+}
+
+{% for relationship in data['relationships'][e] %}
+{% set r = data['relationships'][e][relationship] %}
+{% set objPKey = entity['attributes'][entity['primary_key']] %}
+{% set targetObj = data['entities'][r['name']] %}
+{% set primaryKey = targetObj['attributes'][targetObj['primary_key']] %}
+	{% if r['type'] == "1" %}
+func ({{vars['obj']}} *{{e}}) Set{{targetObj['name']}} (newId {{primaryKey['type']}}) error{
+	var temp {{primaryKey['type']}}
+	if {{vars['obj']}}.Rela_{{targetObj['name']}} != temp {
+		return fmt.Errorf("{{r['name']}} has been setted already")
+	}
+	{{vars['obj']}}.Rela_{{targetObj['name']}} = newId
+	return nil
+}
+
+func ({{vars['obj']}} *{{e}}) Unset{{targetObj['name']}} () error{
+	var temp {{primaryKey['type']}}
+	if {{vars['obj']}}.Rela_{{targetObj['name']}} == temp {
+		return fmt.Errorf("{{r['name']}} has not been setted")
+	}
+	{{vars['obj']}}.Rela_{{targetObj['name']}} = temp
+	return nil
+}
+
+func ({{vars['s']}} *SmartContract) Set{{targetObj['name']}}for{{e}}(ctx contractapi.TransactionContextInterface, {{entity['name']}}_pk {{objPKey['type']}}, {{r['name']}}_pk {{primaryKey['type']}}) error {
+	{{vars['obj']}}, {{vars['err']}} := {{vars['s']}}.Read{{e}}(ctx, {{entity['name']}}_pk)
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+
+	targetObj, {{vars['err']}} := {{vars['s']}}.Read{{r['name']}}(ctx, {{r['name']}}_pk)
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+
+	{{vars['err']}} = {{vars['obj']}}.Set{{r['name']}}({{r['name']}}_pk)
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+	{% set r2 = data['relationships'][r['name']][entity['name']] %}
+	{% if r2['type'] == '1' %}
+	{{vars['err']}} = targetObj.Set{{entity['name']}}({{entity['name']}}_pk)
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+	{% elif r2['type'] == 'n' %}
+	{{vars['err']}} = targetObj.Add{{entity['name']}}({{entity['name']}}_pk)
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+	{% endif %}
+
+	{{vars['updateObjJSON']}}, {{vars['err']}} := json.Marshal({{vars['obj']}})
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+
+	{{vars['err']}} = ctx.GetStub().PutState({{entity['name']}}_pk + "{{entity['name']}}", {{vars['updateObjJSON']}})
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+
+	{{vars['updateObjJSON']}}, {{vars['err']}} = json.Marshal(targetObj)
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+
+	return ctx.GetStub().PutState({{r['name']}}_pk + "{{r['name']}}", {{vars['updateObjJSON']}})
+}
+
+func ({{vars['s']}} *SmartContract) Unset{{targetObj['name']}}for{{e}}(ctx contractapi.TransactionContextInterface, {{entity['name']}}_pk {{objPKey['type']}}) error {
+	{{vars['obj']}}, {{vars['err']}} := {{vars['s']}}.Read{{e}}(ctx, {{entity['name']}}_pk)
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+
+	targetId := {{vars['obj']}}.Rela_{{r['name']}}
+
+	targetObj, {{vars['err']}} := {{vars['s']}}.Read{{r['name']}}(ctx, {{vars['obj']}}.Rela_{{r['name']}})
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+
+	{{vars['err']}} = {{vars['obj']}}.Unset{{r['name']}}()
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+	{% set r2 = data['relationships'][r['name']][entity['name']] %}
+	{% if r2['type'] == '1' %}
+	{{vars['err']}} = targetObj.Unset{{entity['name']}}()
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+	{% elif r2['type'] == 'n' %}
+	{{vars['err']}} = targetObj.Remove{{entity['name']}}({{entity['name']}}_pk)
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+	{% endif %}
+
+	{{vars['updateObjJSON']}}, {{vars['err']}} := json.Marshal({{vars['obj']}})
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+
+	{{vars['err']}} = ctx.GetStub().PutState({{entity['name']}}_pk + "{{entity['name']}}", {{vars['updateObjJSON']}})
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+
+	{{vars['updateObjJSON']}}, {{vars['err']}} = json.Marshal(targetObj)
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+
+	return ctx.GetStub().PutState(targetId + "{{r['name']}}", {{vars['updateObjJSON']}})
+}
+	{% elif r['type'] == "n" %}
+
+func ({{vars['obj']}} *{{e}}) Add{{targetObj['name']}} (id {{primaryKey['type']}}) error{
+	for _, s := range (*{{vars['obj']}}).Rela_{{r['name']}}s {
+		if s == id {
+			return fmt.Errorf("{{r['name']}} has been addded")
+		}
+	}
+	(*{{vars['obj']}}).Rela_{{r['name']}}s = append((*{{vars['obj']}}).Rela_{{r['name']}}s, id)
+	return nil
+}
+
+func (obj *{{e}}) Remove{{targetObj['name']}} (id {{primaryKey['type']}}) error{
+	for i, s := range (*obj).Rela_{{r['name']}}s {
+		if s == id {
+			(*obj).Rela_{{r['name']}}s[i] = (*obj).Rela_{{r['name']}}s[len((*obj).Rela_{{r['name']}}s)-1]
+			(*obj).Rela_{{r['name']}}s = (*obj).Rela_{{r['name']}}s[:len((*obj).Rela_{{r['name']}}s)-1]
+			return nil
+		}
+	}
+	return fmt.Errorf("{{r['name']}} has not been addded")
+}
+
+
+func ({{vars['s']}} *SmartContract) Add{{targetObj['name']}}for{{e}}(ctx contractapi.TransactionContextInterface, {{entity['name']}}_pk {{objPKey['type']}}, {{r['name']}}_pk {{primaryKey['type']}}) error {
+	{{vars['obj']}}, {{vars['err']}} := {{vars['s']}}.Read{{e}}(ctx, {{entity['name']}}_pk)
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+
+	targetObj, {{vars['err']}} := {{vars['s']}}.Read{{r['name']}}(ctx, {{r['name']}}_pk)
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+
+	{{vars['err']}} = {{vars['obj']}}.Add{{r['name']}}({{r['name']}}_pk)
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+	{% set r2 = data['relationships'][r['name']][entity['name']] %}
+	{% if r2['type'] == '1' %}
+	{{vars['err']}} = targetObj.Set{{entity['name']}}({{entity['name']}}_pk)
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+	{% elif r2['type'] == 'n' %}
+	{{vars['err']}} = targetObj.Add{{entity['name']}}({{entity['name']}}_pk)
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+	{% endif %}
+
+	{{vars['updateObjJSON']}}, {{vars['err']}} := json.Marshal({{vars['obj']}})
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+
+	{{vars['err']}} = ctx.GetStub().PutState({{entity['name']}}_pk + "{{entity['name']}}", {{vars['updateObjJSON']}})
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+
+	{{vars['updateObjJSON']}}, {{vars['err']}} = json.Marshal(targetObj)
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+
+	return ctx.GetStub().PutState({{r['name']}}_pk + "{{r['name']}}", {{vars['updateObjJSON']}})
+}
+
+func ({{vars['s']}} *SmartContract) Remove{{targetObj['name']}}for{{e}}(ctx contractapi.TransactionContextInterface, {{entity['name']}}_pk {{objPKey['type']}}, {{r['name']}}_pk {{primaryKey['type']}}) error {
+	{{vars['obj']}}, {{vars['err']}} := {{vars['s']}}.Read{{e}}(ctx, {{entity['name']}}_pk)
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+
+	targetObj, {{vars['err']}} := {{vars['s']}}.Read{{r['name']}}(ctx, {{r['name']}}_pk)
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+
+	{{vars['err']}} = {{vars['obj']}}.Remove{{r['name']}}({{r['name']}}_pk)
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+
+	{% set r2 = data['relationships'][r['name']][entity['name']] %}
+	{% if r2['type'] == '1' %}
+	{{vars['err']}} = targetObj.Unset{{entity['name']}}()
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+	{% elif r2['type'] == 'n' %}
+	{{vars['err']}} = targetObj.Remove{{entity['name']}}({{entity['name']}}_pk)
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+	{% endif %}
+
+	{{vars['updateObjJSON']}}, {{vars['err']}} := json.Marshal({{vars['obj']}})
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+
+	{{vars['err']}} = ctx.GetStub().PutState({{entity['name']}}_pk + "{{entity['name']}}", {{vars['updateObjJSON']}})
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+
+	{{vars['updateObjJSON']}}, {{vars['err']}} = json.Marshal(targetObj)
+	if {{vars['err']}} != nil {
+		return {{vars['err']}}
+	}
+
+	return ctx.GetStub().PutState({{r['name']}}_pk + "{{r['name']}}", {{vars['updateObjJSON']}})
+}
+	{% endif %}
+{% endfor %}
+
+{% endfor %}
+
+func ({{vars['s']}} *SmartContract) objectExists(ctx contractapi.TransactionContextInterface, {{vars['objId']}} string) (bool, error) {
+	assetJSON, {{vars['err']}} := ctx.GetStub().GetState({{vars['objId']}})
+	if {{vars['err']}} != nil {
+		return false, fmt.Errorf("failed to read from world state: %v", {{vars['err']}})
+	}
+
+	return assetJSON != nil, nil
+}
+
+func main() {
+	cc, err := contractapi.NewChaincode(new(SmartContract))
+
+	if err != nil {
+		fmt.Println("Error starting a new ContractApi Chaincode:", err)
+	}
+
+	server := &shim.ChaincodeServer{
+		CCID:    os.Getenv("CHAINCODE_CCID"),
+		Address: os.Getenv("CHAINCODE_ADDRESS"),
+		CC:      cc,
+		TLSProps: shim.TLSProperties{
+			Disabled: true,
+		},
+	}
+
+	// Start the chaincode external server
+	err = server.Start()
+
+	if err != nil {
+		fmt.Println("Error starting FabCar chaincode server:", err)
+	} else {
+		fmt.Println("Succesfully started new Fabcar Chaincode server with the new ContractApi")
+	}
+}

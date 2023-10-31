@@ -1,0 +1,37 @@
+const argv = require("yargs").argv;
+const network = require("../fabric/network")
+const config = require("../config")
+
+async function main(){
+    // let func = argv.func.toString();
+    let enrollAdmin_response = await network.enrollAdmin('{{data['org']}}')
+    console.log(enrollAdmin_response.msg)
+    let enrollOwner_response = await network.enrollOwner(config.OWNER_CERT, config.OWNER_PRIVATE_KEY)
+    console.log(enrollOwner_response.msg)
+    let register_response = await network.registerUser('{{data['org']}}', 'newusertest')
+    console.log(register_response.msg)
+    let username = '{{data['org']}}admin';
+    let org = '{{data['org']}}';
+    let receiver = 'newusertest'
+    let receiver_org = '{{data['org']}}'
+    const networkObj = await network.connectToNetwork(org, username)
+    // console.log(networkObj)
+    let getName_response = await network.getName(networkObj)
+    console.log("Token name: "+getName_response.msg)
+    let getTotalSupply_response = await network.getTotalSupply(networkObj)
+    console.log("Total supply: "+getTotalSupply_response.msg)
+    let balance_send_before = await network.getBalanceOf(networkObj, username, org)
+    console.log(`Balance before transfer of sender ${username}: `+balance_send_before.msg)
+    let balance_receiver_before = await network.getBalanceOf(networkObj, receiver, receiver_org)
+    console.log(`Balance before transfer of receiver ${receiver}: `+balance_receiver_before.msg)
+    console.log(`Transfer 1 token from user ${username} to user ${receiver}`)
+    let response = await network.transfer(networkObj, receiver, receiver_org, 1)
+    console.log(response)
+    let balance_send = await network.getBalanceOf(networkObj, username, org)
+    console.log(`Balance after transfer of sender ${username}: `+balance_send.msg)
+    let balance_receiver = await network.getBalanceOf(networkObj, receiver, receiver_org)
+    console.log(`Balance after transfer of receiver ${receiver}: `+balance_receiver.msg)
+    process.exit(0)
+}
+
+main()

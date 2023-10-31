@@ -1,0 +1,26 @@
+@import "assets/scss/app.scss";
+body {
+    font-family: "Roboto", sans-serif;
+    .rounded-circle {
+        aspect-ratio: 1/1;
+        object-fit: cover;
+    }
+}
+
+body.dark-only {
+    .badge {
+        background-color: #16344c;
+    }
+    .login-card {
+        .login-main {
+            background-color: #262932;
+        }
+    }
+}
+
+@import "layouts/UserLayout/user_layout";
+@import "shared/StepperCustom/stepper_custom";
+@import "views/User/DApps/dapps.scss";
+@import "views/User/Storages2/storage";
+@import "views/User/Networks/index.scss";
+@import "assets/custom/custom";

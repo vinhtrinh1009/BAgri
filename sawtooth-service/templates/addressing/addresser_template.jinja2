@@ -1,0 +1,40 @@
+import enum
+import hashlib
+
+
+FAMILY_NAME = '{{data.basic_info.dapp_name|upper}}'
+FAMILY_VERSION = '{{data.basic_info.dapp_version}}'
+NAMESPACE = hashlib.sha512(FAMILY_NAME.encode('utf-8')).hexdigest()[:6]
+
+{%for entity in data.entities%}
+{{entity.name|upper}}_PREFIX = '0{{entity.address_prefix}}'
+{%endfor%}
+
+
+@enum.unique
+class AddressSpace(enum.IntEnum):
+    {%for entity in data.entities%}
+    {{entity.name|upper}} = {{entity.address_prefix}}
+    {%endfor%}
+    OTHER_FAMILY = 100
+
+
+{%for entity in data.entities%}
+def get_{{entity.name}}_address({{entity.primary_key}}):
+    return NAMESPACE + {{entity.name|upper}}_PREFIX + hashlib.sha512(
+        {{entity.primary_key}}.encode('utf-8')).hexdigest()[:62]
+
+
+{%endfor%}
+def get_address_type(address):
+    if address[:len(NAMESPACE)] != NAMESPACE:
+        return AddressSpace.OTHER_FAMILY
+
+    infix = address[6:8]
+
+    {%for entity in data.entities%}
+    if infix == '0{{entity.prefix}}':
+        return AddressSpace.{{entity.name|upper}}_PREFIX
+    {%endfor%}
+
+    return AddressSpace.OTHER_FAMILY

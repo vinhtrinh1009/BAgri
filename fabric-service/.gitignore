@@ -1,0 +1,11 @@
+venv
+project
+.idea
+*__pycache__*
+test
+projects
+.vscode
+test.py
+temp
+docker-compose-local.yaml
+local_config.yaml

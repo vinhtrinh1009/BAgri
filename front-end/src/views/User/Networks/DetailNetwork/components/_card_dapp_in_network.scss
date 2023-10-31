@@ -1,0 +1,43 @@
+.cardDappInNetwork {
+    width: 100%;
+    text-align: center;
+    border-radius: 8px;
+    background: #f9f9fc;
+    position: relative;
+
+    cursor: pointer;
+    &:hover {
+        box-shadow: 0px 3px 12px #0000001f;
+    }
+    .avatar {
+        padding-top: 23px;
+        padding-bottom: 11px;
+        .img_custom {
+            height: 55px;
+            width: 55px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+    }
+    .dapp_name {
+        padding-bottom: 19px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .border_bottom {
+        position: absolute;
+        display: block;
+        width: 95%;
+        left: 2.5%;
+        border-radius: 10px;
+        height: 4px;
+        bottom: -0.5px;
+    }
+}
+
+body.dark-only {
+    .cardDappInNetwork {
+        background-color: #1a1b22;
+    }
+}

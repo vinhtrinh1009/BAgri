@@ -1,0 +1,73 @@
+body.dark-only {
+    .MuiStepper-root {
+        .MuiStepConnector-line {
+            border-top-width: 3px;
+            border-color: #374558;
+            border-radius: 10px;
+        }
+        .MuiStep-root {
+            .MuiStepLabel-label {
+                font-size: 16px;
+                color: #dddddd;
+                &.Mui-active {
+                    color: #fff;
+                }
+            }
+            svg.MuiSvgIcon-root {
+                color: #374558;
+                width: 30px;
+                height: 30px;
+                text.MuiStepIcon-text {
+                    fill: #7e7e7e;
+                }
+            }
+        }
+        .MuiStep-root.Mui-completed {
+            svg.MuiSvgIcon-root.Mui-completed {
+                color: #87db97 !important;
+            }
+        }
+        .active_step {
+            .MuiStepLabel-iconContainer {
+                position: relative;
+                &::before,
+                &::after {
+                    border: 3px solid #51bb25;
+                    content: "";
+                    position: absolute;
+                    display: block;
+                    width: 30px;
+                    height: 30px;
+                    border-radius: 50%;
+                    animation: ffload 1.5s infinite;
+                }
+                &::after {
+                    animation-delay: 0.75s;
+                }
+            }
+        }
+        .MuiStepConnector-root {
+            &.Mui-active,
+            &.Mui-completed {
+                .MuiStepConnector-line {
+                    border-color: #87db97;
+                }
+            }
+        }
+    }
+    .MuiFormControl-root {
+        .MuiInputLabel-root:not(.Mui-focused) {
+            color: rgba(179, 179, 179, 0.6);
+        }
+
+        .MuiFilledInput-root {
+            color: #f5f5f5;
+            .MuiSvgIcon-root {
+                color: #f5f5f5;
+            }
+        }
+    }
+    .Mui-disabled {
+        color: #7b7b7b;
+    }
+}

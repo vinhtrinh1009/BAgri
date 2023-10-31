@@ -1,0 +1,7 @@
+venv
+core_service/test
+core_service/Application
+.idea
+*__pycache__*
+docker-compose-local.yaml
+config_local.yaml

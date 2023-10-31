@@ -1,0 +1,53 @@
+MIN_SLEEP=5
+MAX_SLEEP=100
+
+#{{data['network_folder']}}/scripts/generate_crypto_material.sh
+
+# kubectl --kubeconfig={{data['kube_config_path']}} apply -f {{data['network_folder']}}/k8s/fabric-tools.yaml
+# sleep $MIN_SLEEP
+
+# kubectl --kubeconfig={{data['kube_config_path']}} apply -f {{data['network_folder']}}/k8s/orderer/orderer-deployment.yaml
+# sleep $MIN_SLEEP
+
+# kubectl --kubeconfig={{data['kube_config_path']}} apply -f {{data['network_folder']}}/k8s/orderer/orderer-service.yaml
+# sleep $MIN_SLEEP
+
+# kubectl --kubeconfig={{data['kube_config_path']}} apply -f {{data['network_folder']}}/k8s/orderer/orderer-ingress.yaml
+# sleep $MIN_SLEEP
+
+{% for org in data['orgs']%}
+    {% for peer_index in range(org['number_peer']) %}
+# kubectl --kubeconfig={{data['kube_config_path']}} apply -f {{data['network_folder']}}/k8s/{{org['name']}}/peer{{peer_index}}-deployment.yaml
+# sleep $MIN_SLEEP
+
+# kubectl --kubeconfig={{data['kube_config_path']}} apply -f {{data['network_folder']}}/k8s/{{org['name']}}/peer{{peer_index}}-service.yaml
+# sleep $MIN_SLEEP
+    {% endfor %}
+
+{% endfor %}
+
+# sleep $MAX_SLEEP
+
+set -x
+#{{data['network_folder']}}/scripts/create_channel.sh
+kubectl --kubeconfig={{data['kube_config_path']}} exec -i fabric-tools -- /bin/bash /fabric/scripts/create_channel.sh
+sleep $MIN_SLEEP
+res=$?
+set +x
+if [ $res -ne 0 ]; then
+{# kubectl --kubeconfig={{data['kube_config_path']}} cp fabric-{{data['domain']}}-tools:/fabric/log.txt ../../log.txt #}
+exit 1
+else
+# kubectl --kubeconfig={{data['kube_config_path']}} apply -f {{data['network_folder']}}/k8s/explorer/explorer-deployment.yaml
+# sleep $MIN_SLEEP
+
+# kubectl --kubeconfig={{data['kube_config_path']}} apply -f {{data['network_folder']}}/k8s/explorer/explorer-service.yaml
+# sleep $MIN_SLEEP
+
+# kubectl --kubeconfig={{data['kube_config_path']}} apply -f {{data['network_folder']}}/k8s/explorer/explorer-ingress.yaml
+# sleep $MIN_SLEEP
+
+exit 0
+fi
+
+

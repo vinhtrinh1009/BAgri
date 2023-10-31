@@ -1,0 +1,6 @@
+export const GET_SEASON_BY_ID = "GET_SEASON_BY_ID";
+export const GET_SEASON_BY_ID_SUCCESSFUL = "GET_SEASON_BY_ID_SUCCESSFUL";
+export const GET_SEASON_BY_ID_FAIL = "GET_SEASON_BY_ID_FAIL";
+
+export const START_DATE = "START_DATE";
+export const ADD = "ADD";

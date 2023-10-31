@@ -1,0 +1,8 @@
+MIN_SLEEP=5
+MAX_SLEEP=20
+
+kubectl --kubeconfig={{data['kube_config_path']}} apply -f {{data['network_folder']}}/k8s/fabric-pv.yaml
+sleep $MIN_SLEEP
+
+kubectl --kubeconfig={{data['kube_config_path']}} apply -f {{data['network_folder']}}/k8s/fabric-pvc.yaml
+sleep $MIN_SLEEP

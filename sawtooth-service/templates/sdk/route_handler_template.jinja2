@@ -1,0 +1,193 @@
+# Copyright 2018 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+import datetime
+from json.decoder import JSONDecodeError
+import time
+import datetime
+import json
+import requests
+import base64
+
+from google.protobuf.json_format import MessageToJson
+from errors import BadRequest, InternalError, CommunicationError
+# generated from **Protobuf**
+{%for entity in data.entities%}
+from protobuf import {{entity.name}}_pb2
+{%endfor%}
+from protobuf import payload_pb2
+from addressing import addresser
+
+from jsonschema import validate
+from jsonschema import ValidationError
+from messaging import Messenger
+
+from {{data.basic_info.encryptionType}}_encrypt import {{data.basic_info.encryptionType}}Cipher
+from file_handler import upload_file
+
+
+class Handler(object):
+    def __init__(self):
+        validator_url='http://{{data.basic_info.public_ip}}:32001'
+        endpoint='http://{{data.basic_info.public_ip}}:32002'
+        self._messenger = Messenger(validator_url)
+        self.endpoint = endpoint
+        self.sdk_key = '{{data.basic_info.sdk_key}}'
+        self.data_folder_id = '{{data.basic_info.data_folder_id}}'
+    
+    def trace(self, transaction_ids):
+        result = self.get_data_blockchain(transaction_ids)
+        return result
+
+    def gen_key_pair(self):
+        public_key, private_key = self._messenger.get_new_key_pair()
+        return public_key, private_key
+
+{%for function in (data.functions.create_functions + data.functions.update_functions)%}
+    def {{function.name}}(self, {%for param in function.params%}{{param.name}}, {%endfor%}private_key
+        ,public_key):
+        temp = {}
+        {%for param in function.params%}
+            {%if param.encrypt%}
+            {%if param.type == 'file'%}
+        temp["{{param.name}}"] = upload_file(self.data_folder_id, self.sdk_key, {{param.name}})["data"]["cid"]
+            {%else%}
+        temp["{{param.name}}"] = {{param.name}}
+            {%endif%}
+            {%endif%}            
+        {%endfor%}
+        {%if function.has_encrypt%}
+        {%if data.basic_info.encryptionType == "AES"%}
+        encrypt_data = AESCipher(private_key).encrypt(json.dumps(temp)).decode("utf8")
+        {%elif data.basic_info.encryptionType == "RSA"%}
+        rsa = RSACipher(private_key, public_key)
+        if rsa == False: 
+            return False
+        else:
+            encrypt_data = rsa.encrypt(json.dumps(temp))
+        {%endif%}
+        {%endif%}
+        
+        batch = self._messenger.send_{{function.name}}_transaction(
+            private_key=private_key,
+            timestamp=get_time(),
+        {%for param in function.params%}
+            {%if not param.encrypt%}
+            {{param.name}}={{param.name}}{{ "," if not loop.last }}
+            {%endif%}    
+        {%endfor%}
+        {%if function.has_encrypt%}
+            ,encrypt_data=encrypt_data
+        {%endif%} 
+        )
+        transaction_id = batch.transactions[0].header_signature
+        return {
+            "data": {
+                "txid": transaction_id
+            }
+        }
+
+{%endfor%}
+{% for function in data.functions.get_functions%}
+    def {{function.name}}(self, {{function.entity_primary_key}}{%if function.has_encrypt%}, private_key{%endif%}
+        {%if data.basic_info.encryptionType == "RSA"%} 
+        ,public_key{%endif%}):
+        {{function.entity_name}}_address = addresser.get_{{function.entity_name}}_address({{function.entity_primary_key}})
+
+        url = '{}/state/{}'.format(self.endpoint, {{function.entity_name}}_address)
+        response = requests.get(url)
+        if response.status_code == 200:
+            try:
+                content = response.content
+                content_json = content.decode('utf8').replace("'", '"')
+                payload_bytes_response = json.loads(content_json)['data']
+                container = {{function.entity_name}}_pb2.{{function.entity_name.capitalize()}}Container()
+                container.ParseFromString(base64.b64decode(payload_bytes_response))
+                json_data = json.loads(MessageToJson(container, preserving_proto_field_name=True))
+                {%if function.has_encrypt%}
+                encrypt_data = json_data["entries"][0].pop('encrypt_data')
+                {%if data.basic_info.encryptionType == "AES"%}
+                decrypt_data = AESCipher(private_key).decrypt(encrypt_data)
+                {%else%}
+                decrypt_data = RSACipher(private_key, public_key).decrypt(encrypt_data)
+                {%endif%}
+                json_data["entries"][0].update(json.loads(decrypt_data))
+                {%endif%}
+                return {
+                    "data": {
+                        '{{function.entity_name}}': json_data["entries"][0],
+                    }
+                }
+            except:
+                raise InternalError('Cannot decode the response')
+        else:
+            raise CommunicationError('Cannot get {{function.entity_name}} with {{function.entity_primary_key}}={}'.format({{function.entity_primary_key}}))
+
+{%endfor%}
+    def get_data_blockchain(self, transaction_ids):
+        results = []
+        for transaction_id in transaction_ids:
+            url = '{}/transactions/{}'.format(self.endpoint, transaction_id)
+            response = requests.get(url)
+            if response.status_code == 200:
+                try:
+                    transaction_dict = json.loads(response.content)
+                    payload_string = transaction_dict['data']['payload']
+                    data_model = payload_pb2.DappPayload()
+                    data_model.ParseFromString(base64.b64decode(payload_string))
+                    json_data = json.loads(MessageToJson(data_model, preserving_proto_field_name=True))
+                    for key, value in json_data.items():
+                        if key != "action" and key != "timestamp":
+                            result = {}
+                            for property_key, property_value in value.items():
+                                split_name = property_key.split("__")
+                                if len(split_name) == 1:
+                                    result[split_name[0]] = property_value
+                                else:
+                                    current_level = result
+                                    for index in range(len(split_name)):
+                                        if index == len(split_name)-1:
+                                            current_level[split_name[index]] = property_value
+                                            break
+                                        if split_name[index] not in current_level:
+                                            current_level[split_name[index]] = {}
+                                        current_level = current_level[split_name[index]]
+                            results.append(result)
+                except:
+                    raise CommunicationError("Error to get data from blockchain")
+
+        return results
+
+def validate_fields(required_fields, body):
+    for field in required_fields:
+        if body.get(field) is None:
+            raise BadRequest(
+                "'{}' parameter is required".format(field))
+
+
+def validate_types(schema, body):
+    try:
+        validate(instance=body, schema=schema)
+    except ValidationError as e:
+        string_array_error = str(e).split("\n")
+        array = {"On instance","[","]","'",":"," "}
+        for a in array:
+            string_array_error[5] = string_array_error[5].replace(a,"")
+        message = string_array_error[0]+" on field '"+ string_array_error[5] +"'"
+
+        raise BadRequest(message)
+
+def get_time():
+    dts = datetime.datetime.utcnow()
+    return round(time.mktime(dts.timetuple()) + dts.microsecond/1e6)

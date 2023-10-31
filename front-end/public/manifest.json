@@ -1,0 +1,26 @@
+{
+    "short_name": "V-Chain",
+    "name": "V-Chain - Decentralized application development and deployment platform on Blockchain technology",
+    "icons": [
+      {
+        "src": "favicon.ico",
+        "sizes": "64x64 32x32 24x24 16x16",
+        "type": "image/x-icon"
+      },
+      {
+        "src": "logo_chinh.png",
+        "type": "image/png",
+        "sizes": "192x192"
+      },
+      {
+        "src": "logo_chinh.png",
+        "type": "image/png",
+        "sizes": "512x512"
+      }
+    ],
+    "start_url": ".",
+    "display": "standalone",
+    "theme_color": "#000000",
+    "background_color": "#ffffff"
+  }
+  

@@ -1,0 +1,23 @@
+OrdererOrgs:
+  - Name: Orderer
+    Domain: {{data['name']}}.com
+    EnableNodeOUs: true
+    Specs:
+      - Hostname: orderer
+        SANS:
+          - localhost
+          - {{data['nodeIp']}}
+PeerOrgs:
+{% for org in data['blockchain_peer_config']['organizations'] %}
+  - Name: {{org['name']|capitalize}}
+    Domain: {{org['name']}}.{{data['name']}}.com
+    EnableNodeOUs: true
+    Template:
+      Count: {{org['number_peer']}}
+      SANS:
+        - localhost
+        - {{data['nodeIp']}}
+        - "{{'{{'}}.Hostname{{'}}'}}-{{org['name']}}"
+    Users:
+      Count: 1
+{% endfor %}

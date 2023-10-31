@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: fabric-service-pv
+  labels:
+    name: fabric-service-files
+spec:
+  storageClassName: nfs-server
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteMany
+  nfs:
+    server: "localhost"
+    path: "/var/nfs/fabric-service/projects"

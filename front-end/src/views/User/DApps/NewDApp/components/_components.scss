@@ -1,0 +1,29 @@
+.react-flow__edge.selected .react-flow__edge-path {
+    stroke: #4498ed !important;
+    z-index: inherit;
+}
+
+::-webkit-scrollbar {
+    width: 8px;
+    height: 5px;
+}
+/* Track */
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+/* Handle */
+::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 8px;
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+    background: #155bbd;
+}
+.popover-comment {
+    padding: 5px;
+    margin: 5px;
+    border-radius: 4px;
+}

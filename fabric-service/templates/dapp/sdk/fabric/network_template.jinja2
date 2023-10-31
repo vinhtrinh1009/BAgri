@@ -1,0 +1,450 @@
+{% set vars = data['variables']%}
+/** @format */
+
+"use strict";
+const {
+  Wallets,
+  Gateway,
+} = require("fabric-network");
+const path = require("path");
+require("dotenv").config();
+const fs = require("fs");
+var CryptoJS = require("crypto-js");
+const storage = require("../storage/storage")
+const {{data['encryptionType']}} = require("../encryption/{{data['encryptionType']}}.js")
+
+exports.connectToNetwork = async function (org, username, secret, cli = false) {
+  try {
+    let identity = username;
+
+    const ccpPath = path.resolve(
+      __dirname,
+      "..",
+      "connection-files",
+      `ccp.json`
+    );
+
+    let walletPath = path.join(process.cwd(), `/wallet/wallet-${org}`);
+
+    if (cli) {
+      walletPath = path.join(process.cwd(), `/wallet/wallet-${org}`);
+    }
+
+    const wallet = await Wallets.newFileSystemWallet(walletPath);
+    const userExists = await wallet.get(username);
+
+    let networkObj;
+
+    if (!userExists) {
+      let response = {};
+      response.error =
+        "An identity for the user " +
+        identity +
+        " does not exist in the wallet. Register " +
+        identity +
+        " first";
+      return response;
+    } else {
+      const gateway = new Gateway();
+
+      const ccpJSON = fs.readFileSync(ccpPath, "utf8");
+      const ccp = JSON.parse(ccpJSON);
+
+      await gateway.connect(ccp, {
+        wallet: wallet,
+        identity: identity,
+        discovery: { enabled: true, asLocalhost: false },
+      });
+
+      const network = await gateway.getNetwork("{{data['network_name']}}-appchannel");
+      const contract = await network.getContract("{{data['dapp_name']}}");
+
+      networkObj = {
+        contract: contract,
+        network: network,
+        gateway: gateway,
+        username: username,
+        encryptObject: new {{data['encryptionType']}}(secret),
+      };
+    }
+
+    return networkObj;
+  } catch (error) {
+    console.error(`Failed to evaluate transaction: ${error}`);
+    process.exit(1);
+  }
+};
+
+exports.query = async function (networkObj, func, args) {
+  let response = {
+    success: false,
+    msg: "",
+  };
+  try {
+    if (Array.isArray(args)) {
+      response.msg = await networkObj.contract.evaluateTransaction(
+        func,
+        ...args
+      );
+
+      response.success = true;
+      return response;
+    } else if (args) {
+      response.msg = await networkObj.contract.evaluateTransaction(func, args);
+
+      response.success = true;
+      return response;
+    } else {
+      response.msg = await networkObj.contract.evaluateTransaction(func);
+
+      response.success = true;
+      return response;
+    }
+  } catch (error) {
+    response.success = false;
+    response.msg = error;
+    return response;
+  }
+};
+{% for e in data['entities'] %}
+{% set entity = data['entities'][e] %}
+
+exports.Create{{entity['name']}} = async function (networkObj, {{entity['name']}}Created) {
+  if (
+    {% for a in entity['attributes'] %}
+    {% set attribute = entity['attributes'][a] %}
+    !{{entity['name']}}Created.{{attribute['name']}} {{ "||" if not loop.last or entity['privates'] or entity['files']}}
+    {% endfor %}{% for p in entity['privates'] %}
+    {% set private = entity['privates'][p] %}
+    !{{entity['name']}}Created.{{private['name']}} {{ "||" if not loop.last or entity['files']}}
+    {% endfor %}
+    {% for f in entity['files'] %}
+    {% set file = entity['files'][f] %}
+    !{{entity['name']}}Created.{{file['name']}} {{ "||" if not loop.last }}
+    {% endfor %}
+  ) {
+    let response = {};
+    response.error =
+      "Error! You need to fill all enitity fields before you can create!";
+    return response;
+  }
+  
+  try {
+    {% if entity['privates'] or entity['files'] %}
+    let temp = {}
+      {% for p in entity['privates'] %}
+      {% set private = entity['privates'][p] %}
+    temp.priv_{{private['name']}} = {{entity['name']}}Created.{{private['name']}};
+      {% endfor %}
+      {% for f in entity['files'] %}
+      {% set file = entity['files'][f] %}
+    temp.file_{{file['name']}} = await storage.upload_file({{entity['name']}}Created.{{file['name']}});
+      {% endfor %}
+    let priv_data = networkObj.encryptObject.encrypt(JSON.stringify(temp));
+    {% endif %}
+
+    await networkObj.contract.submitTransaction(
+      "Create{{entity['name']}}",
+    {% for a in entity['attributes'] %}
+    {% set attribute = entity['attributes'][a] %}
+      {{entity['name']}}Created.{{attribute['name']}}{{ "," if not loop.last or entity['privates'] or entity['files']}}
+    {% endfor %}
+    {% if entity['privates'] or entity['files']%}
+      priv_data
+    {% endif %}
+    );
+
+    let response = {
+      success: true,
+      msg: "Create Successfully!",
+    };
+
+    return response;
+  } catch (error) {
+    let response = {
+      success: false,
+      msg: error,
+    };
+    return response;
+  }
+};
+
+exports.Read{{entity['name']}} = async function (networkObj, {{entity['name']}}_pk) {
+  if (!{{entity['name']}}_pk) {
+    let response = {};
+    response.error =
+      "Error! You need to fill entity primary key before you can read!";
+    return response;
+  }
+
+  try {
+    let result = await networkObj.contract.evaluateTransaction(
+      "Read{{entity['name']}}",
+      {{entity['name']}}_pk
+    );
+
+    result = JSON.parse(result.toString());
+    let temp;
+
+    {% if entity['privates'] or entity['files']%}
+    let bytes = networkObj.encryptObject.decrypt(result.priv_data);
+    let originalText = bytes.toString(CryptoJS.enc.Utf8);
+    delete result.priv_data;
+    temp = JSON.parse(originalText);
+    {% endif %}
+
+    let tmp_result = {...result, ...temp}
+    let return_result = {}
+
+    for (let key in tmp_result) {
+      return_result[key.slice(5)] = tmp_result[key]
+    }
+
+    let response = {
+      success: true,
+      msg: "Read Successfully!",
+      result:  return_result
+    };
+
+    return response;
+  } catch (error) {
+    let response = {
+      success: false,
+      msg: error,
+    };
+    return response;
+  }
+};
+
+exports.Update{{entity['name']}} = async function (networkObj, {{entity['name']}}Updated) {
+  if (!{{entity['name']}}Updated.{{entity['primary_key']}}) {
+    let response = {};
+    response.error =
+      "Error! You need to fill entity primary key before you can update!";
+    return response;
+  }
+
+  try {
+    let result = await networkObj.contract.evaluateTransaction(
+      "Read{{entity['name']}}",
+      {{entity['name']}}Updated.{{entity['primary_key']}}
+    );
+
+    result = JSON.parse(result.toString());
+    let temp;
+
+    {% if entity['privates'] or entity['files']%}
+    let bytes = networkObj.encryptObject.decrypt(result.priv_data);
+    let originalText = bytes.toString(CryptoJS.enc.Utf8);
+    delete result.priv_data;
+    temp = JSON.parse(originalText);
+
+    {% endif %}
+    {% for a in entity['attributes'] %}
+    {% set attribute = entity['attributes'][a] %}
+    if ({{entity['name']}}Updated.hasOwnProperty('{{attribute['name']}}')) {
+      result.attr_{{attribute['name']}} = {{entity['name']}}Updated.{{attribute['name']}};
+    }
+    {% endfor %}
+
+    {% for p in entity['privates'] %}
+    {% set private = entity['privates'][p] %}
+    if ({{entity['name']}}Updated.hasOwnProperty('{{private['name']}}')) {
+      temp.priv_{{private['name']}} = {{entity['name']}}Updated.{{private['name']}};
+    }
+    {% endfor %}
+
+    {% for f in entity['files'] %}
+    {% set file = entity['files'][f] %}
+    if ({{entity['name']}}Updated.hasOwnProperty('{{file['name']}}')) {
+      temp.file_{{file['name']}} = await storage.upload_file({{entity['name']}}Updated.{{file['name']}});
+    }
+    {% endfor %}
+
+    {% if entity['privates'] or entity['files']%}
+    let priv_data = networkObj.encryptObject.encrypt(JSON.stringify(temp)).toString();
+    {% endif %}
+
+    await networkObj.contract.submitTransaction(
+      "Update{{entity['name']}}",
+    {% for a in entity['attributes'] %}
+    {% set attribute = entity['attributes'][a] %}
+      result.attr_{{attribute['name']}}{{ "," if not loop.last or entity['privates'] or entity['files']}}
+    {% endfor %}
+    {% if entity['privates'] or entity['files']%}
+      priv_data
+    {% endif %}
+    );
+
+    let response = {
+      success: true,
+      msg: "Update Successfully!",
+    };
+
+    return response;
+  } catch (error) {
+    let response = {
+      success: false,
+      msg: error,
+    };
+    return response;
+  }
+};
+
+exports.Delete{{entity['name']}} = async function (networkObj, {{entity['name']}}_pk) {
+  if (!{{entity['name']}}_pk) {
+    let response = {};
+    response.error =
+      "Error! You need to fill entity primary key before you can delete!";
+    return response;
+  }
+
+  try {
+    await networkObj.contract.submitTransaction(
+      "Delete{{entity['name']}}",
+      {{entity['name']}}_pk);
+
+    
+    let response = {
+      success: true,
+      msg: "Delete Successfully!",
+    };
+
+    return response;
+  } catch (error) {
+    let response = {
+      success: false,
+      msg: error,
+    };
+    return response;
+  }
+}
+
+{% for relationship in data['relationships'][e] %}
+{% set r = data['relationships'][e][relationship] %}
+{% set objPKey = entity['attributes'][entity['primary_key']] %}
+{% set targetObj = data['entities'][r['name']] %}
+{% set primaryKey = targetObj['attributes'][targetObj['primary_key']] %}
+  {% if r['type'] == "1" %}
+exports.Set{{targetObj['name']}}for{{e}} = async function (networkObj, {{entity['name']}}_pk, {{r['name']}}_pk) {
+  if (!{{entity['name']}}_pk || !{{r['name']}}_pk) {
+    let response = {};
+    response.error =
+      "Error! You need to fill all primary keys before you can set!";
+    return response;
+  }
+
+  try {
+    await networkObj.contract.submitTransaction(
+      "Set{{targetObj['name']}}for{{e}}",
+      {{entity['name']}}_pk,
+      {{r['name']}}_pk
+    );
+
+    let response = {
+      success: true,
+      msg: "Set {{targetObj['name']}} Successfully!",
+    };
+
+    return response;
+  } catch (error) {
+    let response = {
+      success: false,
+      msg: error,
+    };
+    return response;
+  }
+}
+
+exports.Unset{{targetObj['name']}}for{{e}} = async function (networkObj, {{entity['primary_key']}}) {
+  if (!{{entity['primary_key']}}) {
+    let response = {};
+    response.error =
+      "Error! You need to fill all primary keys before you can unset!";
+    return response;
+  }
+
+  try {
+    await networkObj.contract.submitTransaction(
+      "Unset{{targetObj['name']}}for{{e}}",
+      {{entity['primary_key']}}
+    );
+
+    let response = {
+      success: true,
+      msg: "Unset {{targetObj['name']}} Successfully!",
+    };
+
+    return response;
+  } catch (error) {
+    let response = {
+      success: false,
+      msg: error,
+    };
+    return response;
+  }
+}
+  {% elif r['type'] == "n" %}
+exports.Add{{targetObj['name']}}for{{e}} = async function (networkObj, {{entity['name']}}_pk, {{r['name']}}_pk) {
+  if (!{{entity['name']}}_pk || !{{r['name']}}_pk) {
+    let response = {};
+    response.error =
+      "Error! You need to fill all primary keys before you can add!";
+    return response;
+  }
+
+  try {
+    await networkObj.contract.submitTransaction(
+      "Add{{targetObj['name']}}for{{e}}",
+      {{entity['name']}}_pk,
+      {{r['name']}}_pk
+    );
+
+    let response = {
+      success: true,
+      msg: "Add {{targetObj['name']}} Successfully!",
+    };
+
+    return response;
+  } catch (error) {
+    let response = {
+      success: false,
+      msg: error,
+    };
+    return response;
+  }
+}
+
+exports.Remove{{targetObj['name']}}for{{e}} = async function (networkObj, {{entity['name']}}_pk, {{r['name']}}_pk) {
+  if (!{{entity['name']}}_pk || !{{r['name']}}_pk) {
+    let response = {};
+    response.error =
+      "Error! You need to fill all primary keys before you can remove!";
+    return response;
+  }
+
+  try {
+    await networkObj.contract.submitTransaction(
+      "Remove{{targetObj['name']}}for{{e}}",
+      {{entity['name']}}_pk,
+      {{r['name']}}_pk
+    );
+
+    
+    let response = {
+      success: true,
+      msg: "Remove {{targetObj['name']}} Successfully!",
+    };
+
+    return response;
+  } catch (error) {
+    let response = {
+      success: false,
+      msg: error,
+    };
+    return response;
+  }
+}
+  {% endif %}
+{% endfor %}
+{% endfor %}

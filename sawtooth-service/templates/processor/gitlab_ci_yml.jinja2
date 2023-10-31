@@ -1,0 +1,28 @@
+stages:
+  - build
+
+build:
+  stage: build
+  image: docker:latest
+  only:
+    - "master"
+  services:
+    - docker:dind
+  variables:
+    DOCKER_DRIVER: "overlay"
+  retry: 2
+  before_script:
+    - apk add --no-cache curl
+    - docker version
+    - "docker info"
+    - "docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $CI_REGISTRY"
+    - curl -LO https://storage.googleapis.com/kubernetes-release/release/v1.16.2/bin/linux/amd64/kubectl
+    - chmod +x ./kubectl
+    - mv ./kubectl /usr/local/bin/kubectl
+  script:
+    - "docker build -t ${CI_REGISTRY}/${CI_PROJECT_PATH}:0.0.1 ."
+    - "docker push ${CI_REGISTRY}/${CI_PROJECT_PATH}:0.0.1"
+    - kubectl --kubeconfig=$k8s_config create secret docker-registry deploy-{{data['processor_project_name']}}-secrets --docker-server=https://registry.gitlab.com --docker-username={{ data.gitlab_username }} --docker-password={{ data.gitlab_password }}
+    - kubectl --kubeconfig=$k8s_config apply -f processor.yaml
+  after_script:
+    - "docker logout ${CI_REGISTRY}"

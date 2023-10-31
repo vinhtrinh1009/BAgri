@@ -1,0 +1,68 @@
+{
+	"name": "{{data['network_name']}}",
+	"version": "1.0.0",
+	"license": "Apache-2.0",
+	"client": {
+		"tlsEnable": true,
+		"caCredential": {
+			"id": "admin",
+			"password": "adminpw"
+		},
+		"adminCredential": {
+			"id": "exploreradmin",
+			"password": "exploreradminpw",
+			"affiliation": "{{data['orgs'][0]['name']}}.department1"
+		},
+		"enableAuthentication": false,
+		"organization": "{{data['orgs'][0]['name']|capitalize}}MSP",
+		"connection": {
+			"timeout": {
+				"peer": {
+					"endorser": "300"
+				},
+				"orderer": "300"
+			}
+		}
+	},
+	"channels": {
+		"{{data['network_name']}}-appchannel": {
+			"peers": {
+				"peer0.{{data['orgs'][0]['name']}}.{{data['network_name']}}.com": {}
+			},
+			"connection": {
+				"timeout": {
+					"peer": {
+						"endorser": "6000",
+						"eventHub": "6000",
+						"eventReg": "6000"
+					}
+				}
+			}
+		}
+	},
+	"organizations": {
+		"{{data['orgs'][0]['name']|capitalize}}MSP": {
+			"mspid": "{{data['orgs'][0]['name']|capitalize}}MSP",
+			"adminPrivateKey": {
+				"path": "/fabric/crypto-config/peerOrganizations/{{data['orgs'][0]['name']}}.{{data['network_name']}}.com/users/Admin@{{data['orgs'][0]['name']}}.{{data['network_name']}}.com/msp/keystore/priv_sk"
+			},
+			"peers": [
+				"peer0.{{data['orgs'][0]['name']}}.{{data['network_name']}}.com"
+			],
+			"signedCert": {
+				"path": "/fabric/crypto-config/peerOrganizations/{{data['orgs'][0]['name']}}.{{data['network_name']}}.com/users/Admin@{{data['orgs'][0]['name']}}.{{data['network_name']}}.com/msp/signcerts/Admin@{{data['orgs'][0]['name']}}.{{data['network_name']}}.com-cert.pem"
+			}
+		}
+	},
+	"peers": {
+		"peer0.{{data['orgs'][0]['name']}}.{{data['network_name']}}.com": {
+			"tlsCACerts": {
+				"path": "/fabric/crypto-config/peerOrganizations/{{data['orgs'][0]['name']}}.{{data['network_name']}}.com/peers/peer0.{{data['orgs'][0]['name']}}.{{data['network_name']}}.com/tls/ca.crt"
+			},
+      "url": "grpcs://{{data['nodeIp']}}:{{calPeerNodePort(0, 0)}}",
+			"grpcOptions": {
+				"ssl-target-name-override": "peer0.{{data['orgs'][0]['name']}}.{{data['network_name']}}.com"
+			}
+		}
+	}
+}

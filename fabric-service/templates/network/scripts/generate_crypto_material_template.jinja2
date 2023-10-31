@@ -1,0 +1,10 @@
+export FABRIC_CFG_PATH={{data['network_folder']}}/config
+# cryptogen generate --config {{data['network_folder']}}/config/crypto-config.yaml --output {{data['network_folder']}}/crypto-config
+# generate genensis block
+configtxgen -profile TwoOrgsOrdererGenesis -channelID system-channel -outputBlock {{data['network_folder']}}/configtxgen/genesis.block
+# generate channel tx
+configtxgen -profile TwoOrgsChannel -outputCreateChannelTx {{data['network_folder']}}/configtxgen/{{data['network_name']}}-appchannel.tx -channelID {{data['network_name']}}-appchannel
+#generate anchorpeer tx
+{% for org in data['orgs'] %}
+configtxgen -profile TwoOrgsChannel -outputAnchorPeersUpdate {{data['network_folder']}}/configtxgen/{{org['name']|capitalize}}MSPanchors.tx -channelID {{data['network_name']}}-appchannel -asOrg {{org['name']|capitalize}}MSP
+{% endfor %}

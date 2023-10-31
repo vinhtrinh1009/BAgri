@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+message DappPayload{
+    {% set ns = namespace(index=1) %}
+    enum Action {
+        CREATE_DATA = 0;
+        {%for function in data.create_functions%}
+        {{function.name|upper}} = {{ns.index}};
+            {% set ns.index = (ns.index + 1) %}
+        {%endfor%}
+        {%for function in data.update_functions%}
+        {{function.name|upper}} = {{ns.index}};
+            {%set ns.index = ns.index + 1%}
+        {%endfor%}
+    }
+    Action action = 1;
+    uint64 timestamp = 2;
+    {% set ns.index = 3 %}
+    {%for function in data.create_functions%}
+    {{function.action_name}} {{function.name}} = {{ns.index}};
+        {%set ns.index = ns.index + 1%}
+    {%endfor%}
+    {%for function in data.update_functions%}
+    {{function.action_name}} {{function.name}} = {{ns.index}};
+        {%set ns.index = ns.index + 1%}
+    {%endfor%}
+}
+
+{%for function in data.create_functions%}
+message {{function.action_name}} {
+    {%set temp = namespace(index=0) %}
+    {%for param in function.params%}
+        {%if param.encrypt%}
+            {%set temp.index = (temp.index + 1)%}
+        {%elif param.proto_type != 'array'%}
+    {{param.proto_type}} {{param.proto_name}} = {{loop.index - temp.index}};
+        {%else%}
+    repeated string {{param.proto_name}} = {{loop.index - temp.index}};
+        {%endif%}
+        {%if loop.last%}
+            {%set temp.index = (loop.index - temp.index + 1)%}
+        {%endif%}
+    {%endfor%}
+    {% if function.has_encrypt %}
+    string encrypt_data = {{temp.index}};
+    {% endif %}
+}
+{%endfor%}
+
+{%for function in data.update_functions%}
+message {{function.action_name}} {
+    {% set temp = namespace(index=0) %}
+    {%for param in function.params%}
+        {%if param.encrypt%}
+            {%set temp.index = (temp.index + 1)%}
+        {%elif param.proto_type != 'array'%}
+    {{param.proto_type}} {{param.proto_name}} = {{loop.index - temp.index}};
+        {%else%}
+    repeated string {{param.proto_name}} = {{loop.index-temp.index}};
+        {%endif%}
+        {%if loop.last%}
+            {%set temp.index = (loop.index - temp.index + 1)%}
+        {%endif%}
+    {%endfor%}
+    {% if function.has_encrypt %}
+    string encrypt_data = {{temp.index}};
+    {% endif %}
+}
+{%endfor%}

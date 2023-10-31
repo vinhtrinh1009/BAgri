@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Season detail</title>
+    <style>
+        .container {
+            width: 100%;
+            max-width: 960px;
+            margin: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h3>Tên mùa vụ: {{ name }}</h3>
+        <p>Ngày bắt đầu: {{ start_date }}</p>
+        <p>Ngày kết thúc: {{ end_date }}</p>
+        <span>Danh sách các công việc</span>
+        <ul>
+            <li>
+                <div>
+                    <span>Công việc 1</span> <br />
+                    <span>Thời gian thực hiên: 20/10/2019 - 20/10/2019</span> <br />
+                    <div style="display:flex;">
+                        <img style="margin-right: 10px;" width="150" src="https://www.w3schools.com/howto/img_avatar.png" alt="">
+                        <img width="150" src="https://www.w3schools.com/howto/img_avatar.png" alt="">
+                    </div>
+                </div>
+            </li>
+        </ul>
+    </div>
+</body>
+
+</html>

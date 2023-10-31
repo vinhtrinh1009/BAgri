@@ -1,0 +1,108 @@
+.oganization {
+    position: relative;
+    .remove_btn {
+        position: absolute;
+        right: -30px;
+        top: 10px;
+        display: flex;
+        background: #ddd;
+        border-radius: 50%;
+        cursor: pointer;
+        width: 34px;
+        height: 34px;
+        justify-content: center;
+        align-items: center;
+        &:hover {
+            background-color: #ddd;
+        }
+        &:active {
+            background-color: #ccc;
+        }
+    }
+}
+.input-f {
+    max-width: 685px;
+    margin: 0px auto 40px auto;
+    min-width: 230px;
+}
+.node-plan {
+    padding: 16px;
+    text-align: left;
+    background: #f9f9fc;
+    border-radius: 8px !important;
+    position: relative;
+    cursor: pointer;
+    max-width: 226px;
+    box-shadow: none !important;
+    &::before {
+        position: absolute;
+        transition: inherit;
+        width: 95%;
+        content: "";
+        height: 4px;
+        border-radius: 20px;
+        bottom: -1px;
+        left: 2.5%;
+        background-color: #cccccc;
+        display: block;
+    }
+    &:hover {
+        &::before {
+            background-color: #1998f4;
+        }
+    }
+    &:active {
+        background-color: #ccc;
+    }
+}
+.node-plan-active {
+    background-color: #dee2e6;
+    &::before {
+        background-color: #1998f4;
+    }
+}
+
+.step_3 {
+    .setup_info {
+        div {
+            margin-bottom: 20px;
+            font-size: 16px;
+            &:first-child {
+                text-align: right;
+                span {
+                    opacity: 0.65;
+                    display: inline-block;
+                    text-align: left;
+                    width: 180px;
+                }
+            }
+            &:last-child {
+                font-weight: 500;
+            }
+        }
+    }
+}
+
+@media (max-width: 700px) {
+    .step_3 {
+        .setup_info {
+            div {
+                &:first-child {
+                    text-align: left;
+                }
+                &:last-child {
+                    margin-left: 40px;
+                }
+            }
+        }
+    }
+}
+
+body.dark-only {
+    .node-plan {
+        background-color: #1d1e27;
+    }
+    .node-plan-active {
+        background-color: #16344c;
+    }
+}

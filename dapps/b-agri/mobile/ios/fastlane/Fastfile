@@ -1,0 +1,134 @@
+# This file contains the fastlane.tools configuration
+# You can find the documentation at https://docs.fastlane.tools
+#
+# For a list of all available actions, check out
+#
+#     https://docs.fastlane.tools/actions
+#
+# For a list of all available plugins, check out
+#
+#     https://docs.fastlane.tools/plugins/available-plugins
+#
+
+# Uncomment the line if you want fastlane to automatically update itself
+# update_fastlane
+
+default_platform(:ios)
+
+platform :ios do
+  desc "Description of what the lane does"
+  lane :custom_lane do
+    # add actions here: https://docs.fastlane.tools/actions
+  end
+
+  lane :dxg_ipa do
+    Dir.chdir "../.." do
+      sh("flutter", "packages", "get")
+      sh("flutter", "clean")
+      sh("flutter", "build", "ios", "--release", "--no-codesign", "--flavor", "dxg")
+    end
+    build_app(
+      workspace: "Runner.xcworkspace",
+      configuration: "Release-dxg",
+      scheme: "dxg",
+      export_options: {
+        provisioningProfiles: {
+          "vn.realagent.careplus" => "CarePlus_dev_ihz"
+        },
+        method: "development",
+      },
+      silent: true,
+      clean: true,
+      output_directory: "build/ipa",
+      output_name: "app-dxg.ipa",
+    )
+  end
+
+  lane :dxg_testflight do
+    Dir.chdir "../.." do
+      sh("flutter", "packages", "get")
+      sh("flutter", "clean")
+      sh("flutter", "build", "ios", "--release", "--no-codesign", "--flavor", "dxg")
+    end
+    build_app(
+      workspace: "Runner.xcworkspace",
+      configuration: "Release-dxg",
+      scheme: "dxg",
+      export_options: {
+        provisioningProfiles: {
+          "vn.realagent.careplus" => "CarePlus_dev_ihz"
+        },
+        method: "app-store",
+      },
+      silent: true,
+      clean: true,
+    )
+    upload_to_testflight(
+      username: "thoson.it@gmail.com",
+      app_identifier: "it.thoson.Test",
+      team_id: "52541802"
+      #itc_team_name: "NEWWAVE SOLUTIONS JSC"
+      #itc_provider: "uiob-thky-zvlr-zpah"
+    )
+  end
+
+  lane :dxg_firebase do
+    Dir.chdir "../.." do
+      sh("flutter", "packages", "get")
+      sh("flutter", "clean")
+      sh("flutter", "build", "ios", "--release", "--no-codesign", "--flavor", "dxg")
+    end
+    build_app(
+      workspace: "Runner.xcworkspace",
+      configuration: "Release-dxg",
+      scheme: "dxg",
+      export_options: {
+        provisioningProfiles: {
+          "vn.realagent.careplus" => "CarePlus_dev_ihz"
+        },
+        method: "development",
+      },
+      silent: true,
+      clean: true,
+      output_directory: "build/ipa",
+      output_name: "app-dxg.ipa",
+    )
+    firebase_app_distribution(
+      app: "1:1006750391992:ios:4c21234d2b3c326589de4d",
+      ipa_path:"./build/ipa/app-dxg.ipa",
+      groups: "tester",
+      release_notes: "Môi trường Staging",
+      firebase_cli_token: "1//0eXTVsVeraY0WCgYIARAAGA4SNwF-L9IrL1wCPFlfM94gSwFNZFqXNLDkfqd1E2hZGo2MvjxvSEdk-4HzVJNXso5Vq6CTI9wmja8"
+    )
+  end
+
+  lane :nws_firebase do
+    Dir.chdir "../.." do
+      sh("flutter", "packages", "get")
+      sh("flutter", "clean")
+      sh("flutter", "build", "ios", "--release", "--no-codesign", "--flavor", "nws")
+    end
+    build_app(
+      workspace: "Runner.xcworkspace",
+      configuration: "Release-nws",
+      scheme: "nws",
+      export_options: {
+        provisioningProfiles: {
+          "vn.dxg.admin-nws" => "CarePlus_dev_ihz"
+        },
+        method: "development",
+      },
+      silent: true,
+      clean: true,
+      output_directory: "build/ipa",
+      output_name: "app-nws.ipa",
+    )
+    firebase_app_distribution(
+      app: "1:868895377674:ios:51ef557a81995f0c4992f3",
+      ipa_path:"./build/ipa/app-nws.ipa",
+      groups: "newwave",
+      release_notes: "Môi trường Thực hành",
+      firebase_cli_token: "1//0eXTVsVeraY0WCgYIARAAGA4SNwF-L9IrL1wCPFlfM94gSwFNZFqXNLDkfqd1E2hZGo2MvjxvSEdk-4HzVJNXso5Vq6CTI9wmja8"
+    )
+  end
+end

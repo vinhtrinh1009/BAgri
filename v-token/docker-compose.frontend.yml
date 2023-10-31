@@ -1,0 +1,13 @@
+version: '3.3'
+
+services:
+    frontend:
+        build: 
+            context: ./frontend
+            dockerfile: dev.dockerfile
+        volumes:
+            - ./frontend:/front-end-v2
+            - /front-end-v2/node_modules/
+        ports:
+            - 3000:3000
+        command: npm run start

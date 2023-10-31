@@ -1,0 +1,140 @@
+---
+Organizations:
+    - &OrdererOrg
+        Name: OrdererOrg
+        ID: OrdererMSP
+        MSPDir: {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['network_name']}}.com/msp
+        Policies:
+            Readers:
+                Type: Signature
+                Rule: "OR('OrdererMSP.member')"
+            Writers:
+                Type: Signature
+                Rule: "OR('OrdererMSP.member')"
+            Admins:
+                Type: Signature
+                Rule: "OR('OrdererMSP.admin')"
+        OrdererEndpoints:
+            - {{data['nodeIp']}}:{{calOrdererNodePort()}}
+
+{% for org in data['orgs'] %}
+{% set org_index = loop.index - 1%}
+    - &{{org['name']|capitalize}}
+        Name: {{org['name']|capitalize}}MSP
+        ID: {{org['name']|capitalize}}MSP
+        MSPDir: {{data['network_folder']}}/crypto-config/peerOrganizations/{{org['name']}}.{{data['network_name']}}.com/msp
+        Policies:
+            Readers:
+                Type: Signature
+                Rule: "OR('{{org['name']|capitalize}}MSP.admin', '{{org['name']|capitalize}}MSP.peer', '{{org['name']|capitalize}}MSP.client')"
+            Writers:
+                Type: Signature
+                Rule: "OR('{{org['name']|capitalize}}MSP.admin', '{{org['name']|capitalize}}MSP.client')"
+            Admins:
+                Type: Signature
+                Rule: "OR('{{org['name']|capitalize}}MSP.admin')"
+            Endorsement:
+                Type: Signature
+                Rule: "OR('{{org['name']|capitalize}}MSP.peer')"
+
+{% endfor %}
+Capabilities:
+    Channel: &ChannelCapabilities
+        V2_0: true
+    Orderer: &OrdererCapabilities
+        V2_0: true
+    Application: &ApplicationCapabilities
+        V2_0: true
+
+Application: &ApplicationDefaults
+    Organizations:
+    Policies:
+        Readers:
+            Type: ImplicitMeta
+            Rule: "ANY Readers"
+        Writers:
+            Type: ImplicitMeta
+            Rule: "ANY Writers"
+        Admins:
+            Type: ImplicitMeta
+            Rule: "MAJORITY Admins"
+        LifecycleEndorsement:
+            Type: ImplicitMeta
+            Rule: "MAJORITY Endorsement"
+        Endorsement:
+            Type: ImplicitMeta
+            Rule: "MAJORITY Endorsement"
+    Capabilities:
+        <<: *ApplicationCapabilities
+
+Orderer: &OrdererDefaults
+    OrdererType: etcdraft
+    Addresses:
+        - {{data['nodeIp']}}:{{calOrdererNodePort()}}
+
+    EtcdRaft:
+        Consenters:
+        - Host: {{data['nodeIp']}}
+          Port: {{calOrdererNodePort()}}
+          ClientTLSCert: {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['network_name']}}.com/orderers/orderer.{{data['network_name']}}.com/tls/server.crt
+          ServerTLSCert: {{data['network_folder']}}/crypto-config/ordererOrganizations/{{data['network_name']}}.com/orderers/orderer.{{data['network_name']}}.com/tls/server.crt
+
+    BatchTimeout: 2s
+    BatchSize:
+        MaxMessageCount: 10
+        AbsoluteMaxBytes: 99 MB
+        PreferredMaxBytes: 512 KB
+    Organizations:
+    Policies:
+        Readers:
+            Type: ImplicitMeta
+            Rule: 'ANY Readers'
+        Writers:
+            Type: ImplicitMeta
+            Rule: 'ANY Writers'
+        Admins:
+            Type: ImplicitMeta
+            Rule: 'MAJORITY Admins'
+        BlockValidation:
+            Type: ImplicitMeta
+            Rule: 'ANY Writers'
+Channel: &ChannelDefaults
+    Policies:
+        Readers:
+            Type: ImplicitMeta
+            Rule: "ANY Readers"
+        Writers:
+            Type: ImplicitMeta
+            Rule: "ANY Writers"
+        Admins:
+            Type: ImplicitMeta
+            Rule: "MAJORITY Admins"
+    Capabilities:
+        <<: *ChannelCapabilities
+
+Profiles:
+    TwoOrgsOrdererGenesis:
+        <<: *ChannelDefaults
+        Orderer:
+            <<: *OrdererDefaults
+            Organizations:
+                - *OrdererOrg
+            Capabilities:
+                <<: *OrdererCapabilities
+        Consortiums:
+            SampleConsortium:
+                Organizations:
+        {% for org in data['orgs']%}
+                    - *{{org['name']|capitalize}}
+        {% endfor %}
+    TwoOrgsChannel:
+        Consortium: SampleConsortium
+        <<: *ChannelDefaults
+        Application:
+            <<: *ApplicationDefaults
+            Organizations:
+      {% for org in data['orgs']%}
+                - *{{org['name']|capitalize}}
+      {% endfor %}
+            Capabilities:
+                <<: *ApplicationCapabilities

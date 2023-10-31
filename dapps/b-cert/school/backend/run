@@ -1,0 +1,41 @@
+#!/usr/bin/python3
+import os
+import sys
+import signal
+import subprocess
+
+
+if __name__ == '__main__':
+    DEBUG = True if os.environ.get('DEBUG', '').lower().strip() in ('1', 'true') else False
+
+    DEBUG = True
+
+    # p1 = subprocess.Popen(['python3', 'manage.py', 'run_log_consumer'])
+    # p2 = subprocess.Popen(['python3', 'manage.py', 'run_server_manager'])
+    if DEBUG:
+        p3 = subprocess.Popen(['python3', 'manage.py', 'runserver', '0.0.0.0:8000'])
+    else:
+        p3 = subprocess.Popen(['daphne', '-b', '0.0.0.0', '-p', '8000', 'aidudu.asgi:application'])
+
+
+    # p4 = subprocess.Popen(['celery', '-A', 'aidudu', 'worker', '-l', 'debug' if DEBUG else 'warning'])
+    # p5 = subprocess.Popen(['celery', '-A', 'aidudu', 'beat', '-l', 'debug' if DEBUG else 'warning'])
+
+    # child_processes = [p1, p2, p3, p4, p5]
+    # child_processes = [p3, p4, p5]
+    child_processes = [p3]
+
+    def signal_handler(sig, frame):
+        print('You pressed Ctrl+C!')
+
+        for p in child_processes:
+            try:
+                p.terminate()
+            except Exception:
+                pass
+
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, signal_handler)
+    print('Press Ctrl+C to exit')
+    signal.pause()

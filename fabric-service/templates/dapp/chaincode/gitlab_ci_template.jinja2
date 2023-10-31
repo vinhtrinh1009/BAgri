@@ -1,0 +1,23 @@
+stages:
+  - build
+
+build:
+  stage: build
+  image: docker:latest
+  only:
+    - "master"
+  services:
+    - docker:dind
+  variables:
+    DOCKER_DRIVER: "overlay"
+  retry: 2
+  before_script:
+    - apk add --no-cache curl
+    - docker version
+    - "docker info"
+    - "docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $CI_REGISTRY"
+  script:
+    - "docker build -t ${CI_REGISTRY}/${CI_PROJECT_PATH}:{{data['dapp_version']}} ."
+    - "docker push ${CI_REGISTRY}/${CI_PROJECT_PATH}:{{data['dapp_version']}}"
+  after_script:
+    - "docker logout ${CI_REGISTRY}"

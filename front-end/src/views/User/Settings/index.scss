@@ -1,0 +1,193 @@
+.d-center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.text-head {
+    color: var(--unnamed-color-000000);
+    text-align: center;
+    font: normal normal bold 38px/44px Roboto;
+    letter-spacing: 0px;
+    color: #000000;
+    text-transform: capitalize;
+    opacity: 0.5;
+}
+.bodySetting {
+    padding-top: 20px;
+    padding-left: 33px;
+    border-radius: 22px !important;
+}
+.title {
+    color: var(--unnamed-color-000000);
+    text-align: left;
+    font: normal normal bold 24px/28px Roboto;
+    letter-spacing: 0px;
+    color: #000000;
+    opacity: 1;
+}
+.btn-header {
+    text-transform: none !important;
+    height: 42px;
+    text-align: left;
+    font: normal normal medium 17px/20px Roboto;
+    letter-spacing: 0px;
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+    color: black !important;
+    border-radius: 8px !important;
+    opacity: 0.65;
+}
+.active {
+    text-transform: none !important;
+    height: 42px;
+    text-align: left;
+    border-radius: 8px !important;
+    font: normal normal medium 17px/20px Roboto;
+    letter-spacing: 0px;
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+    color: #1998f4 !important;
+    background-color: #ebf6ff !important;
+    opacity: 1;
+}
+.headerSetting {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.account {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    .name {
+        margin-left: 20px;
+        color: var(--unnamed-color-000000);
+        text-align: center;
+        font: normal normal bold 32px/29px Roboto;
+        letter-spacing: 0px;
+        color: #000000;
+        opacity: 1;
+    }
+    .btn-disable {
+        text-transform: none !important;
+        margin-right: 5%;
+        height: 36px;
+        width: 139px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        color: var(--unnamed-color-f5658a);
+        text-align: center;
+        font: normal normal medium 14px/16px Roboto;
+        letter-spacing: 0px;
+        color: #f5658a !important;
+        background-color: #fef4f6 !important;
+        opacity: 1;
+    }
+}
+.input {
+    width: 100%;
+    background: #fff !important;
+    border-radius: 6px 6px 0px 0px;
+    opacity: 1;
+}
+.rowEditProfile {
+    width: 100%;
+    padding: 0;
+    margin-top: 29px;
+}
+.btn-editProfile {
+    position: absolute !important;
+    right: 15px;
+}
+.css-k4qjio-MuiFormHelperText-root {
+    text-align: left;
+    font: normal normal normal 12px/10px Roboto;
+    letter-spacing: 0px;
+    color: #f5658a !important;
+    opacity: 1;
+}
+.noti-title {
+    color: var(--unnamed-color-000000);
+    text-align: center;
+    font: normal normal normal 14px/16px Roboto;
+    letter-spacing: 0px;
+    color: #000000;
+    opacity: 0.87;
+}
+.noti-action {
+    text-align: left;
+    font: normal normal bold 16px/19px Roboto;
+    letter-spacing: 0px;
+    color: #000000;
+    opacity: 0.87;
+    display: flex;
+    align-items: center;
+}
+.plan-paper {
+    text-align: center;
+    height: 426px;
+    background-color: #f5f5f5 !important;
+    border-radius: 22px !important;
+    opacity: 1;
+
+    .plan-header {
+        padding-top: 26px;
+        margin-bottom: 10px;
+        text-align: center;
+        font: normal normal 28px/33px Roboto !important;
+        letter-spacing: 0px;
+        color: #000000;
+        text-transform: uppercase;
+        opacity: 1;
+    }
+    .plan-price {
+        padding-bottom: 26px;
+        border-bottom: #1998f4 1px solid;
+        text-align: center;
+        font: normal normal normal 28px/28px Roboto;
+        letter-spacing: 0px;
+        color: #000000;
+        opacity: 1;
+    }
+    .plan-body {
+        text-align: center;
+        font: normal normal 18px/40px Roboto;
+        letter-spacing: 0px;
+        color: #000000;
+        opacity: 0.87;
+    }
+}
+.current {
+    background-color: #ebf6ff !important;
+}
+
+.avatar_upload {
+    transition: 0.3s;
+    position: absolute;
+    top: 0;
+    left: 0;
+
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 150px;
+    height: 150px;
+    box-sizing: border-box;
+    padding-top: 83px;
+    cursor: pointer;
+}
+.icon-badge {
+    background-color: #ddd;
+    position: absolute;
+
+    height: 25px;
+    width: 25px;
+    border-radius: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}

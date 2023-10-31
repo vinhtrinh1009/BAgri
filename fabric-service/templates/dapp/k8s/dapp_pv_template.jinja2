@@ -1,0 +1,17 @@
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: {{data['dapp_name']}}-pv
+  labels:
+    name: {{data['dapp_name']}}-files
+spec:
+  capacity:
+    storage: 1Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    path: /var/nfs/{{data['username']}}/dapp/{{data['dapp_name']}}
+    server: localhost
+    readOnly: false

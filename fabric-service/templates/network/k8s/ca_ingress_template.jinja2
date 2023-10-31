@@ -1,0 +1,16 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: ca-ingress-{{ data['name'] }}
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /ca/{{data['name']}}/?(.*)
+        backend: 
+          serviceName: ca-{{ data['name'] }}
+          servicePort: 7054
+#  tls:
+#    secretName: ca-ingress-tls

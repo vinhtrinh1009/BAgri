@@ -1,0 +1,28 @@
+.my_storage {
+    padding-top: 30px;
+    .my_storage_header {
+        display: flex;
+        height: 52px;
+        justify-content: space-between;
+        .my_storage_header_title {
+            font: normal normal bold 24px/28px Roboto;
+        }
+        .my_storage_header_consumption {
+            display: flex;
+            .my_storage_header_consumption_text {
+                font-style: normal;
+                font-variant-ligatures: normal;
+                font-variant-caps: normal;
+                font-variant-numeric: normal;
+                font-variant-east-asian: normal;
+                font-stretch: normal;
+                font-size: 14px;
+                line-height: 16px;
+                font-family: Roboto;
+            }
+        }
+    }
+}
+.hidden_bg_upload {
+    display: none;
+}

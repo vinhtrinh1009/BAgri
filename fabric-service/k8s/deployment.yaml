@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fabric-service
+  labels:
+    app: fabric-service
+spec:
+  selector:
+    matchLabels:
+      app: fabric-service
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: fabric-service
+    spec:
+      containers:
+      - name: fabric-service
+        image: registry.gitlab.com/datochain/v-chain/fabric-service:latest
+        imagePullPolicy: Always
+        command:
+          - bash
+        args:
+          - -c
+          - "cd fabric_appservice && python3 main.py"
+        env:
+          - name: CONFIG_FILE
+            value: product.yaml
+        volumeMounts:
+          - name: fabric-service-projects
+            mountPath: /fabric_appservice/projects
+      
+      - name: fabric-celery-worker
+        image: registry.gitlab.com/datochain/v-chain/fabric-service:latest
+        imagePullPolicy: Always
+        command:
+          - bash
+        args:
+          - -c
+          - "cd fabric_appservice && celery -A celery_worker worker -l info"
+        env:
+          - name: CONFIG_FILE
+            value: product.yaml
+        volumeMounts:
+          - name: fabric-service-projects
+            mountPath: /fabric_appservice/projects
+
+      volumes:
+        - name: fabric-service-projects
+          persistentVolumeClaim:
+            claimName: fabric-service-pvc
+
+      imagePullSecrets:
+      - name: manhld-gitlab-token
+      restartPolicy: Always

@@ -1,0 +1,27 @@
+var CryptoJS = require("crypto-js");
+
+class AES {
+  constructor(secret) {
+    this.secret = secret
+  }
+
+  encrypt(plaintext) {
+    return CryptoJS.AES.encrypt(plaintext, this.secret).toString();
+  }
+
+  decrypt(ciphertext) {
+    try {
+      let bytes = CryptoJS.AES.decrypt(ciphertext, this.secret);
+      let originalText = bytes.toString(CryptoJS.enc.Utf8);
+      if (!originalText) {
+        throw "Failed to Decrypt";
+      }
+      return originalText
+    }
+    catch (e) {
+      throw "Failed to Decrypt"
+    }
+  }
+}
+
+module.exports = AES

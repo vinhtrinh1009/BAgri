@@ -1,0 +1,304 @@
+apiVersion: v1
+kind: List
+
+items:
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: {{ data['name'] }}-0
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          name: {{ data['name'] }}-0
+      template:
+        metadata:
+          labels:
+            name: {{ data['name'] }}-0
+        spec:
+          containers:
+            - name: sawtooth-pbft-engine
+              image: hyperledger/sawtooth-pbft-engine:chime
+              command:
+                - bash
+              args:
+                - -c
+                - "pbft-engine -vv --connect tcp://$HOSTNAME:5050"
+              
+              volumeMounts:
+                - name: sawtooth-files
+                  subPath: pbft-shared-0-pbft-engine
+                  mountPath: "/pbft-shared"
+
+            - name: sawtooth-rest-api
+              image: hyperledger/sawtooth-rest-api:chime
+              ports:
+                - name: api
+                  containerPort: 8008
+              command:
+                - bash
+              args:
+                - -c
+                - "sawtooth-rest-api -vv -C tcp://$HOSTNAME:4004 -B 0.0.0.0:8008"
+              readinessProbe:
+                httpGet:
+                  path: /status
+                  port: 8008
+                initialDelaySeconds: 15
+                periodSeconds: 10
+
+            - name: sawtooth-settings-tp
+              image: hyperledger/sawtooth-settings-tp:chime
+              command:
+                - bash
+              args:
+                - -c
+                - "settings-tp -vv -C tcp://$HOSTNAME:4004"
+
+            - name: sawtooth-shell
+              image: hyperledger/sawtooth-shell:chime
+              command:
+                - bash
+              args:
+                - -c
+                - "sawtooth keygen && tail -f /dev/null"
+
+            - name: sawtooth-validator
+              image: hyperledger/sawtooth-validator:chime
+              ports:
+                - name: tp
+                  containerPort: 4004
+                - name: consensus
+                  containerPort: 5050
+                - name: validators
+                  containerPort: 8800
+              envFrom:
+                - configMapRef:
+                    name: keys-config
+              command:
+                - bash
+              args:
+                - -c
+                - |
+                  if [ ! -e /etc/sawtooth/keys/validator.priv ]; then
+                    echo $pbft0priv > /etc/sawtooth/keys/validator.priv
+                    echo $pbft0pub > /etc/sawtooth/keys/validator.pub
+                  fi &&
+                  if [ ! -e /root/.sawtooth/keys/my_key.priv ]; then
+                    sawtooth keygen my_key
+                  fi &&
+                  if [ ! -e config-genesis.batch ]; then
+                    sawset genesis -k /root/.sawtooth/keys/my_key.priv -o config-genesis.batch
+                  fi &&
+                  sleep 30 &&
+                  echo sawtooth.consensus.pbft.members=["\"$pbft0pub\",{% for i in range(1, data['number_peer']) %}\"$pbft{{ i }}pub\"{{ "," if not loop.last }}{{ "\"" if loop.last }}{% endfor %} ] &&
+                  if [ ! -e config.batch ]; then
+                    sawset proposal create \
+                      -k /root/.sawtooth/keys/my_key.priv \
+                      sawtooth.consensus.algorithm.name=pbft \
+                      sawtooth.consensus.algorithm.version=1.0\
+                      sawtooth.consensus.pbft.members=["\"$pbft0pub\",{% for i in range(1, data['number_peer']) %}\"$pbft{{ i }}pub\"{{ "," if not loop.last }}{{ "\"" if loop.last }}{% endfor %}] \
+                      sawtooth.publisher.max_batches_per_block=1200 \
+                      -o config.batch
+                  fi && \
+                  if [ ! -e /var/lib/sawtooth/genesis.batch ]; then
+                    sawadm genesis config-genesis.batch config.batch
+                  fi &&
+                  sawtooth-validator -vv \
+                    --endpoint tcp://{{data['public_ip']}}:32003 \
+                    --bind component:tcp://eth0:4004 \
+                    --bind consensus:tcp://eth0:5050 \
+                    --bind network:tcp://eth0:8800 \
+                    --scheduler parallel \
+                    --peering static \
+                    --maximum-peer-connectivity 10000
+              
+              volumeMounts:
+                - name: sawtooth-files
+                  subPath: pbft-shared-0-validator
+                  mountPath: "/pbft-shared"
+
+          volumes:
+          - name: sawtooth-files
+            persistentVolumeClaim:
+              claimName: sawtooth-pvc
+  
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: sawtooth-0
+    spec:
+      type: NodePort
+      selector:
+        name: {{ data['name'] }}-0
+      ports:
+        - name: "4004"
+          protocol: TCP
+          port: 4004
+          targetPort: 4004
+          nodePort: 32001
+        - name: "5050"
+          protocol: TCP
+          port: 5050
+          targetPort: 5050
+        - name: "8008"
+          protocol: TCP
+          port: 8008
+          targetPort: 8008
+          nodePort: 32002
+        - name: "8080"
+          protocol: TCP
+          port: 8080
+          targetPort: 8080
+        - name: "8800"
+          protocol: TCP
+          port: 8800
+          targetPort: 8800
+          nodePort: 32003
+
+{% set temp = namespace(index=32003) %}
+{% for i in range(1,data['number_peer']) %}
+  {% set temp.index = (temp.index+1) %}
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: {{ data['name'] }}-{{ i }}
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          name: {{ data['name'] }}-{{ i }}
+      template:
+        metadata:
+          labels:
+            name: {{ data['name'] }}-{{ i }}
+        spec:
+          containers:
+            - name: sawtooth-pbft-engine
+              image: hyperledger/sawtooth-pbft-engine:chime
+              command:
+                - bash
+              args:
+                - -c
+                - "pbft-engine -vv --connect tcp://$HOSTNAME:5050"
+              volumeMounts:
+                - name: sawtooth-files
+                  subPath: pbft-shared-{{ i }}-pbft-engine
+                  mountPath: "/pbft-shared"
+
+            - name: sawtooth-rest-api
+              image: hyperledger/sawtooth-rest-api:chime
+              ports:
+                - name: api
+                  containerPort: 8008
+              command:
+                - bash
+              args:
+                - -c
+                - "sawtooth-rest-api -vv -C tcp://$HOSTNAME:4004 -B 0.0.0.0:8008"
+              readinessProbe:
+                httpGet:
+                  path: /status
+                  port: 8008
+                initialDelaySeconds: 15
+                periodSeconds: 10
+
+            - name: sawtooth-settings-tp
+              image: hyperledger/sawtooth-settings-tp:chime
+              command:
+                - bash
+              args:
+                - -c
+                - "settings-tp -vv -C tcp://$HOSTNAME:4004"
+
+            - name: sawtooth-shell
+              image: hyperledger/sawtooth-shell:chime
+              command:
+                - bash
+              args:
+                - -c
+                - "sawtooth keygen && tail -f /dev/null"
+
+            - name: sawtooth-validator
+              image: hyperledger/sawtooth-validator:chime
+              ports:
+                - name: tp
+                  containerPort: 4004
+                - name: consensus
+                  containerPort: 5050
+                - name: validators
+                  containerPort: 8800
+              env:
+                - name: pbft{{ i }}priv
+                  valueFrom:
+                    configMapKeyRef:
+                      name: keys-config
+                      key: pbft{{ i }}priv
+                - name: pbft{{ i }}pub
+                  valueFrom:
+                    configMapKeyRef:
+                      name: keys-config
+                      key: pbft{{ i }}pub
+              command:
+                - bash
+              args:
+                - -c
+                - |
+                  if [ ! -e /etc/sawtooth/keys/validator.priv ]; then
+                    echo $pbft{{ i }}priv > /etc/sawtooth/keys/validator.priv
+                    echo $pbft{{ i }}pub > /etc/sawtooth/keys/validator.pub
+                  fi &&
+                  sawtooth keygen my_key &&
+                  sawtooth-validator -vv \
+                    --endpoint tcp://{{data['public_ip']}}:{{temp.index}} \
+                    --bind component:tcp://eth0:4004 \
+                    --bind consensus:tcp://eth0:5050 \
+                    --bind network:tcp://eth0:8800 \
+                    --scheduler parallel \
+                    --peering dynamic \
+                    --maximum-peer-connectivity 10000 \
+                    --seeds tcp://{{data['public_ip']}}:32003
+              
+              volumeMounts:
+                - name: sawtooth-files
+                  subPath: pbft-shared-{{ i }}-validator
+                  mountPath: "/pbft-shared"
+          
+          volumes:
+          - name: sawtooth-files
+            persistentVolumeClaim:
+              claimName: sawtooth-pvc
+
+  
+  
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: sawtooth-{{ i }}
+    spec:
+      type: NodePort
+      selector:
+        name: {{ data['name'] }}-{{ i }}
+      ports:
+        - name: "4004"
+          protocol: TCP
+          port: 4004
+          targetPort: 4004
+        - name: "5050"
+          protocol: TCP
+          port: 5050
+          targetPort: 5050
+        - name: "8008"
+          protocol: TCP
+          port: 8008
+          targetPort: 8008
+        - name: "8080"
+          protocol: TCP
+          port: 8080
+          targetPort: 8080
+        - name: "8800"
+          protocol: TCP
+          port: 8800
+          targetPort: 8800
+          nodePort: {{temp.index}}
+{% endfor %}

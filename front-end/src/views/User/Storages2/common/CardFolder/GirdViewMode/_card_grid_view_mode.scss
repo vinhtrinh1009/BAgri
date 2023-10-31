@@ -1,0 +1,55 @@
+.card_grid_view_mode {
+    display: flex;
+    height: 76px;
+    margin-bottom: 23px;
+    align-items: center;
+    background-color: #f9f9fc;
+    border-radius: 12px;
+    padding: 0px 25px;
+    cursor: pointer;
+    transition: 0.15s;
+
+    &:hover {
+        background-color: #ebf6ff;
+    }
+    &.activeItem {
+        background-color: #dcefff;
+    }
+    .card_grid_view_mode_icon {
+        position: relative;
+        display: flex;
+        color: #717171;
+        width: 23px;
+        height: 27px;
+        justify-content: center;
+        margin-right: 16px;
+    }
+    .card_grid_view_mode_title {
+        width: calc(100% - 39px);
+        position: relative;
+        div {
+            width: 100%;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+        .sub_icon {
+            color: #ffd500;
+            position: absolute;
+            right: -10px;
+            bottom: -5px;
+        }
+    }
+}
+
+body.dark-only {
+    .card_grid_view_mode {
+        background-color: #2f333e;
+        &:hover {
+            background-color: #15344c;
+        }
+        &.activeItem {
+            background-color: #004478;
+        }
+    }
+}

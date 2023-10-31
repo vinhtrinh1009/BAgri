@@ -1,0 +1,30 @@
+---
+#---------------- Chaincode Deployment ---------------------
+apiVersion: apps/v1 # for versions before 1.8.0 use apps/v1beta1
+kind: Deployment
+metadata:
+  name: {{data['dapp_name']}}
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: {{data['dapp_name']}}
+  template:
+    metadata:
+      labels:
+        app: {{data['dapp_name']}}
+    spec:
+      containers:
+        - image: {{data['image']}}
+          name: {{data['dapp_name']}}
+          imagePullPolicy: Always
+          env:
+            - name: CHAINCODE_CCID
+              value: "{{data['chaincode_id']}}"
+            - name: CHAINCODE_ADDRESS
+              value: "0.0.0.0:7052"
+          ports:
+            - containerPort: 7052
+      imagePullSecrets:
+        - name: deploy-dapp-secrets
+      restartPolicy: Always

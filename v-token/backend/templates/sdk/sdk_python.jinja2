@@ -1,0 +1,77 @@
+import json
+import os
+from web3 import Web3
+from .exceptions import *
+from web3.middleware import geth_poa_middleware
+
+class TokenContractHandler:
+    def __init__(self, sender_address, sender_private_key):
+        self.sender_address = sender_address
+        self.sender_private_key = sender_private_key
+        # self.contract_abi_path = os.path.join("build", "abi", "{{data.abi.filename}}")
+        self.contract_abi_path = os.path.join(os.path.dirname(__file__), "build", "abi", "{{data.abi.filename}}")
+        self.contract_abi = json.load(open(self.contract_abi_path))
+        self.endpoint = "{{data.network.url}}"
+        self.web3 = Web3(Web3.HTTPProvider(self.endpoint))
+        self.web3.middleware_onion.inject(geth_poa_middleware, layer=0)
+        self.contract_address = "{{data.token.address}}"
+        self.contract = self.web3.eth.contract(address=self.contract_address, abi=self.contract_abi)
+    
+    {% for _function in data.abi.functions %}
+    {% if _function.stateMutability != 'view' %}
+    def {{_function.python_name}}(self{% if _function.inputs %}, {% for _param in _function.inputs %}{{_param.name}}{{ ", " if not loop.last }}{% endfor %}{% endif %}):
+        nonce = self.web3.eth.getTransactionCount(self.sender_address)
+        retry = 10
+        while retry > 0:
+            try:
+                _params = (
+                {% for _param in _function.inputs %}
+                    {{_param.name}}{{ ", " }}
+                {% endfor %}
+                )
+
+                func = self.contract.functions.{{_function.name}}(*_params)
+                tx = func.buildTransaction({
+                        'from': self.sender_address,
+                        # 'gas': 800000,
+                        # 'gasPrice': self.web3.toWei('200', 'gwei'),
+                        'nonce': nonce,
+                        # 'chainId': 4
+                    })
+                signed_tx = self.web3.eth.account.sign_transaction(tx, self.sender_private_key)
+                tx_hash = self.web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+                
+                return (self.web3.toHex(tx_hash))
+            except SchemaError as e:
+                retry = 0
+                raise TokenContractSDKError(e.message)
+
+            except ThirdPartyRequestError as e:
+                nonce += 1
+                retry -= 1
+
+            except Exception as ex:
+                nonce += 1
+                retry -= 1
+        raise TokenContractSDKError("Timeout error!")
+
+    {% else %}
+    def {{_function.python_name}}(self{% if _function.inputs %}, {% for _param in _function.inputs %}{{_param.name}}{{ ", " if not loop.last }}{% endfor %}{% endif %}, block_id='latest'):
+        {% if _function.inputs %}
+        _params = (
+            {% for _param in _function.inputs %}
+                {{_param.name}}{{ ", " }}
+            {% endfor %}
+        )
+
+        return self.contract.functions.{{_function.name}}(*_params).call(block_identifier=block_id)
+        {% else %}
+        return self.contract.functions.{{_function.name}}().call(block_identifier=block_id)
+        {% endif %}
+    
+    {%endif%}
+    {%endfor%}
+
+    def wait_for_receipt(self, tx_hash):
+        return self.web3.eth.wait_for_transaction_receipt(tx_hash)
+

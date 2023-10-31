@@ -1,0 +1,14 @@
+import React from "react";
+
+const Logo = (props) => {
+  return (
+    <img
+      alt="Logo"
+      src="/static/logo.svg"
+      // src="/b4elogo.png"
+      {...props}
+    />
+  );
+};
+
+export default Logo;

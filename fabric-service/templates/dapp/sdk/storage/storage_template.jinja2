@@ -1,0 +1,44 @@
+const URL = "{{data['url']}}"
+const FOLDER_ID = "{{data['folder_id']}}"
+const SDK_KEY = "{{data['sdk_key']}}"
+
+const axios = require('axios')
+const FormData = require('form-data');
+const fs = require('fs');
+
+exports.upload_file = async (filePath) => {
+  try {
+    if (fs.existsSync(filePath)) {
+      let url = `${URL}/files/${FOLDER_ID}/upload?sdk_key=${SDK_KEY}`
+
+      let form_data = new FormData();
+      form_data.append("permission", "rw");
+      let file = fs.createReadStream(filePath);
+      form_data.append("upload_file", file);
+
+      let config = {
+        method: 'post',
+        url: url,
+        headers: {
+          ...form_data.getHeaders()
+        },
+        data: form_data
+      };
+
+      let res = await axios(config);
+
+      if (res.data.status == 'success') {
+        return res.data.data.uploaded_file.cid
+      }
+      else {
+        throw new Error("Failed to upload file")
+      }
+    }
+    else {
+      throw new Error("File not found")
+    }
+  }
+  catch (err) {
+    throw err
+  }
+}

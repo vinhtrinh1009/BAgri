@@ -1,0 +1,60 @@
+MIN_SLEEP=5
+MAX_SLEEP=100
+
+export KUBECONFIG=./k8s_config.yaml
+
+kubectl delete -f ./k8s/orderer/ca-deployment.yaml
+
+
+kubectl delete -f ./k8s/orderer/ca-service.yaml
+
+
+# kubectl delete -f ./k8s/orderer/ca-ingress.yaml
+
+{% for org in data['orgs']%}
+
+kubectl delete -f ./k8s/{{org['name']}}/ca-deployment.yaml
+
+
+kubectl delete -f ./k8s/{{org['name']}}/ca-service.yaml
+
+
+# kubectl delete -f ./k8s/{{org['name']}}/ca-ingress.yaml
+
+{% endfor %}
+
+kubectl delete -f ./k8s/fabric-tools.yaml
+
+
+kubectl delete -f ./k8s/orderer/orderer-deployment.yaml
+
+
+kubectl delete -f ./k8s/orderer/orderer-service.yaml
+
+
+# kubectl delete -f ./k8s/orderer/orderer-ingress.yaml
+
+{% for org in data['orgs']%}
+    {% for peer_index in range(org['number_peer']) %}
+kubectl delete -f ./k8s/{{org['name']}}/peer{{peer_index}}-deployment.yaml
+
+
+kubectl delete -f ./k8s/{{org['name']}}/peer{{peer_index}}-service.yaml
+
+    {% endfor %}
+
+{% endfor %}
+
+kubectl delete -f ./k8s/explorer/explorer-deployment.yaml
+
+
+kubectl delete -f ./k8s/explorer/explorer-service.yaml
+
+
+# kubectl delete -f ./k8s/explorer/explorer-ingress.yaml
+
+kubectl delete -f ./k8s/fabric-pvc.yaml
+
+kubectl delete -f ./k8s/fabric-pv.yaml
+
+exit 0

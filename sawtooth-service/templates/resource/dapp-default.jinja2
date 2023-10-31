@@ -1,0 +1,11 @@
+version: '3.6'
+
+services:
+  {%  for dapp in data['dapps'] %}
+  {{dapp["dapp_name"]}}processorapp-5:
+    image: registry.gitlab.com/test-application/{{data["username"]}}/{{dapp["dapp_name"]}}/{{dapp["dapp_name"]}}processor:0.0.1
+    container_name: {{dapp["dapp_name"]}}processorapp-5
+    expose:
+      - 4004
+    entrypoint: python3 main.py -vv -C tcp://{{data["host"]}}:4004
+  {%endfor%}

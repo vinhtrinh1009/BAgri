@@ -1,0 +1,179 @@
+.toggle_sidebar_bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba($color: #000000, $alpha: 0.5);
+    z-index: $zIndex_header;
+    animation: fadeIn 0.3s;
+    display: none;
+}
+.vchain_sidebar {
+    z-index: $zIndex_sidebar;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: $sidebar_width;
+    background: #ffffff;
+    box-shadow: 0px 3px 8px #0000001f;
+    transition: 0.3s;
+    white-space: nowrap;
+    overflow: hidden;
+
+    .vchain_logo_wrapper {
+        height: $header_height;
+        width: $sidebar_width;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        .vchain_logo {
+            margin-left: 20px;
+        }
+        .logo_short {
+            display: none;
+            margin-left: 20px;
+        }
+        .logo_light_theme {
+            display: block;
+        }
+        .logo_dark_theme {
+            display: none;
+        }
+        .toggle_sidebar {
+            display: inline-flex;
+            width: 41px;
+            height: 41px;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            margin-right: 27px;
+            margin-bottom: 0px;
+            color: #707070;
+            position: relative;
+            &::before,
+            &::after {
+                position: absolute;
+                content: "";
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(#d6d6d6, 0.2);
+                border-radius: 50%;
+                transition: 0.3s;
+                transform-origin: center;
+                transform: scale(0, 0);
+            }
+            &:hover {
+                &::before {
+                    transform: scale(1, 1);
+                }
+            }
+            &:active {
+                &::after {
+                    transform: scale(1, 1);
+                    background: rgba(#1998f4, 0.2);
+                }
+            }
+        }
+    }
+    .vchain_menu {
+        .vchain_menu_item {
+            display: flex;
+            height: 56px;
+            align-items: center;
+            width: $sidebar_width;
+            transition: 0.2s;
+            position: relative;
+            &::before {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 0px;
+                content: "";
+                height: 100%;
+                transition: inherit;
+                background: #1998f4;
+            }
+            &:hover {
+                &:not(.submenu) {
+                    background: #ebf6ff;
+                }
+                color: #1998f4;
+                &:not(.submenu)::before {
+                    // height: 100%;
+                    width: 6px;
+                }
+            }
+
+            .item_icon {
+                transition: $transition_time;
+                display: inline-flex;
+                justify-content: center;
+                align-items: center;
+                height: 49.4px;
+                width: 49.4px;
+                margin-left: 14px;
+            }
+            .item_title {
+                transition: $transition_time;
+                font-size: 16px;
+            }
+        }
+        .submenu {
+            opacity: 0.65;
+            &:hover {
+                background: #f9f9fc;
+                opacity: 1;
+            }
+        }
+        .vchain_menu_item.active_router {
+            &:not(.submenu) {
+                background: #ebf6ff;
+            }
+            color: #1998f4;
+            opacity: 1;
+            &:not(.submenu)::before {
+                // height: 100%;
+                width: 6px;
+            }
+        }
+    }
+}
+
+body.dark-only {
+    .vchain_sidebar {
+        background-color: $bg_color_dark_only;
+        box-shadow: 0px 3px 8px #0000008f;
+        .vchain_menu {
+            .vchain_menu_item {
+                color: white;
+                &:hover {
+                    background-color: #16344c;
+                }
+            }
+        }
+        .vchain_menu_item.active_router {
+            &:not(.submenu) {
+                background: #16344c;
+            }
+            color: #1998f4;
+        }
+        .vchain_logo_wrapper {
+            .logo_light_theme {
+                display: none;
+            }
+            .logo_dark_theme {
+                display: block;
+            }
+        }
+    }
+}
+
+@media (max-width: 1279px) {
+    .vchain_sidebar {
+        width: 0px;
+    }
+}

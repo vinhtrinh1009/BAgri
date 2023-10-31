@@ -1,0 +1,10 @@
+venv
+project
+.idea
+*__pycache__*
+test
+projects
+.vscode
+deploy_k8s
+test.py
+docker-compose-local.yaml

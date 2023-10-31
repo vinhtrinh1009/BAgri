@@ -1,0 +1,9 @@
+FROM haiquan5396/base-processor:1.0
+
+WORKDIR /processor
+
+ENV PATH $PATH:/processor
+
+COPY . .
+
+ENTRYPOINT [ "python3", "main.py" ]

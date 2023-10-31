@@ -1,0 +1,270 @@
+package main
+
+import (
+	. "erc20/helpers"
+	"erc20/lib/erc20basic"
+	"erc20/lib/erc20burnable"
+	"erc20/lib/erc20detailed"
+	"erc20/lib/erc20mintable"
+	"erc20/lib/erc20ownable"
+	"erc20/lib/erc20pausable"
+	"fmt"
+	"math/big"
+	"strings"
+
+	"github.com/hyperledger/fabric-chaincode-go/shim"
+	pb "github.com/hyperledger/fabric-protos-go/peer"
+)
+
+//InitialMintAmount * 10^(token decimals) is the initial `total supply` of tokens
+const InitialMintAmount int64 = {{data['initialSupply']}}
+const name string = "{{data['name']}}"
+const symbol string = "{{data['symbol']}}"
+const decimal string = "{{data['decimal']}}"
+
+/*SampleToken is a simple ERC20 Token example. Refer to https://eips.ethereum.org/EIPS/eip-20 for documentations.*/
+type SampleToken struct {
+	erc20basic.BasicTokenInterface
+	erc20ownable.OwnableTokenInterface
+	erc20detailed.DetailedTokenInterface
+	erc20mintable.MintableTokenInterface
+	erc20burnable.BurnableTokenInterface
+	erc20pausable.PausableTokenInterface
+}
+
+// main function starts up the chaincode in the container during instantiate
+func main() {
+	//new instance of token that mostly implements standard library
+	//erc20 basic type is extended with "memo" functionality
+	sampleToken := &SampleToken{
+		&erc20basic.Token{},
+		&erc20ownable.Token{},
+		&erc20detailed.Token{},
+		&erc20mintable.Token{},
+		&erc20burnable.Token{},
+		&erc20pausable.Token{},
+	}
+	if err := shim.Start(sampleToken); err != nil {
+		panic(err)
+	}
+}
+
+//#region chain code implementation
+
+/*Init chaincode for Token, this method is called when we instantiate or upgrade our token.
+(https://hyperledger-fabric.readthedocs.io/en/release-1.4/chaincode4ade.html#initializing-the-chaincode).
+
+Init takes in one argument as a JSON-formatted string for token configurations, specifies the token attributes.
+Owner of the token is also initialized as the contract's invoker.*/
+
+func (t *SampleToken) Init(stub shim.ChaincodeStubInterface) pb.Response {
+	callerID, err := GetCallerID(stub)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	// if this is not the first init call (chaincode upgrade)
+	// then owner validation is needed
+	if currentOwner, _ := t.GetOwner(stub); strings.TrimSpace(currentOwner) != "" {
+		// logger.Infof("Upgrading chaincode using %v...", callerID)
+		if err := CheckCallerIsOwner(callerID, currentOwner); err != nil {
+			return shim.Error(err.Error())
+		}
+	} else {
+		// // checks if "decimals" is a string of number format
+		n := StringToInt(decimal)
+
+		err = stub.PutState("owner", []byte(callerID))
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		err = stub.PutState("name", []byte(name))
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		err = stub.PutState("symbol", []byte(symbol))
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		err = stub.PutState("decimals", []byte(decimal))
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+
+		//mint the initial total supply
+		//https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/examples/SimpleToken.sol
+
+		err = t.Mint(stub,
+			[]string{callerID, Mul(big.NewInt(InitialMintAmount), Pow(10, n)).String()},
+			withOwnerIs(callerID),
+			withInitialBalanceOf(0),
+			t.GetTotalSupply,
+		)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+	}
+
+	return shim.Success(nil)
+}
+
+//bypass the instance's own GetBalanceOf method to avoid "user is not registered" error as the caller is not
+//activated during first initialization phase (uncommitted transaction)
+func withInitialBalanceOf(initialBalance int64) func(stub shim.ChaincodeStubInterface, args []string) (*big.Int, error) {
+	return func(stub shim.ChaincodeStubInterface, args []string) (*big.Int, error) {
+		return big.NewInt(initialBalance), nil
+	}
+}
+
+func withOwnerIs(owner string) func(shim.ChaincodeStubInterface) (string, error) {
+	return func(shim.ChaincodeStubInterface) (string, error) {
+		return owner, nil
+	}
+}
+
+/*Invoke is called per transaction on the chaincode*/
+func (t *SampleToken) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
+	methodName, params := stub.GetFunctionAndParameters()
+
+	//some functions are locked when the token state is "paused"
+	isPaused, err := t.IsPaused(stub)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	if isPaused {
+		switch methodName {
+		case "Transfer", "TransferFrom", "UpdateApproval":
+			return shim.Error("Calling " + methodName + " is not allowed when token is paused")
+		}
+	}
+
+	switch methodName {
+	case "GetBalanceOf":
+		f, err := t.GetBalanceOf(stub, params)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		return shim.Success([]byte(f.String()))
+	case "GetTotalSupply":
+		f, err := t.GetTotalSupply(stub)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		return shim.Success([]byte(f.String()))
+	case "GetAllowance":
+		f, err := t.GetAllowance(stub, params)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		return shim.Success([]byte(f.String()))
+	case "GetOwner":
+		s, err := t.GetOwner(stub)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		return shim.Success([]byte(s))
+	case "TransferOwnership":
+		err := t.TransferOwnership(stub, params, t.GetOwner)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		return shim.Success(nil)
+	case "GetName":
+		s, err := t.GetName(stub)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		return shim.Success([]byte(s))
+	case "GetSymbol":
+		s, err := t.GetSymbol(stub)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		return shim.Success([]byte(s))
+	case "GetDecimals":
+		s, err := t.GetDecimals(stub)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		return shim.Success([]byte(s))
+	case "Mint":
+		err := t.Mint(stub, params, t.GetOwner, t.GetBalanceOf, t.GetTotalSupply)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		return shim.Success(nil)
+	case "Burn":
+		err := t.Burn(stub, params, t.GetTotalSupply, t.GetBalanceOf)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		return shim.Success(nil)
+	case "BurnFrom":
+		err := t.BurnFrom(stub, params, t.GetAllowance, t.GetTotalSupply, t.GetBalanceOf)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		return shim.Success(nil)
+	case "Transfer":
+		err := t.Transfer(stub, params, t.GetBalanceOf)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		return shim.Success(nil)
+	case "TransferFrom":
+		err := t.TransferFrom(stub, params, t.GetBalanceOf, t.GetAllowance)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		return shim.Success(nil)
+	case "UpdateApproval":
+		err := t.UpdateApproval(stub, params)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		return shim.Success(nil)
+	case "Pause":
+		err := t.Pause(stub, t.GetOwner)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		return shim.Success(nil)
+	case "Unpause":
+		err := t.Unpause(stub, t.GetOwner)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		return shim.Success(nil)
+	case "Activate":
+		err := t.Activate(stub, params, t.GetBalanceOf)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		return shim.Success(nil)
+	case "Init":
+		err := t.Init(stub)
+		return err
+	}
+
+	return shim.Error("Input function is not defined in chaincode")
+}
+
+//#endregion chain code implementation
+
+/*Activate is a customed non standard erc20 that set the balance of client to "0".
+This marks the active state of target so that subsequent Transfer operations will be successful
+
+* `args[0]` - the key ID of target client.*/
+func (t *SampleToken) Activate(stub shim.ChaincodeStubInterface, args []string, getBalanceOf func(shim.ChaincodeStubInterface, []string) (*big.Int, error)) error {
+	clientID := args[0]
+	balanceOfReceiver, err := getBalanceOf(stub, []string{clientID})
+	if err != nil && balanceOfReceiver == nil {
+		// set the buffer to "0"
+		// so the next time (customed) `GetBalanceOf` is called it won't show error
+		return stub.PutState(clientID, []byte{48})
+	}
+	// logger.Errorf("[sample-token.Activate] %v is already registered", clientID)
+	return fmt.Errorf("%v is already registered", clientID)
+}
+
+//#endregion custom non-standard ERC20 implementation (transaction memo)

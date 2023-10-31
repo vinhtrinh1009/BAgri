@@ -1,0 +1,29 @@
+from sawtooth_sdk.processor.exceptions import InvalidTransaction
+
+from protobuf import payload_pb2
+
+
+class DappPayload(object):
+
+    def __init__(self, payload):
+        self._transaction = payload_pb2.DappPayload()
+        self._transaction.ParseFromString(payload)
+
+    @property
+    def action(self):
+        return self._transaction.action
+
+    @property
+    def data(self):
+    {%for function in (data.functions.create_functions + data.functions.update_functions)%}
+        if self._transaction.HasField('{{function.name}}') and \
+            self._transaction.action == \
+                payload_pb2.DappPayload.{{function.name|upper}}:
+            return self._transaction.{{function.name}}
+
+    {%endfor%}
+        raise InvalidTransaction('Action does not match payload data')
+
+    @property
+    def timestamp(self):
+        return self._transaction.timestamp

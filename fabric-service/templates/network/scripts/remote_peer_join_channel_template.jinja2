@@ -1,0 +1,55 @@
+COUNTER=1
+MAX_RETRY=5
+MIN_SLEEP=3
+MAX_SLEEP=10
+
+verifyResult() {
+  if [ $1 -ne 0 ]; then
+    echo "!!!!!!!!!!!!!!! "$2" !!!!!!!!!!!!!!!!"
+    echo "=== ERROR !!! FAILED to execute End-2-End Scenario ==="
+    echo
+    exit 1
+  fi
+}
+
+joinChannelWithRetry() {
+
+    peer channel fetch 0 /fabric/${CHANNEL_NAME}.block -o ${ORDERER_URL} -c ${CHANNEL_NAME} --ordererTLSHostnameOverride orderer.{{data['network_name']}}.com --tls --cafile ${ORDERER_CA}
+    set -x
+    peer channel join -b /fabric/${CHANNEL_NAME}.block >&log.txt
+    res=$?
+    set +x
+    cat log.txt
+    if [ $res -ne 0 -a $COUNTER -lt $MAX_RETRY ]; then
+        rm -rf /fabric/${CHANNEL_NAME}.block
+        COUNTER=$(expr $COUNTER + 1)
+        echo "${CORE_PEER_ADDRESS} failed to join the channel, Retry after ${MAX_SLEEP} seconds"
+        sleep $MAX_SLEEP
+        joinChannelWithRetry
+    else
+        rm -rf /fabric/${CHANNEL_NAME}.block
+        COUNTER=1
+    fi
+    verifyResult $res "After $MAX_RETRY attempts, ${CORE_PEER_ADDRESS} has failed to join channel '${CHANNEL_NAME}' "
+}
+
+export CORE_PEER_TLS_ENABLED=true
+export ORDERER_CA="/fabric/crypto-config/ordererOrganizations/{{data['network_name']}}.com/orderers/orderer.{{data['network_name']}}.com/msp/tlscacerts/tlsca.{{data['network_name']}}.com-cert.pem"
+export ORDERER_URL="{{data['nodeIp']}}:{{calOrdererNodePort()}}"
+export CORE_PEER_ADDRESSAUTODETECT="false"
+export CORE_PEER_NETWORKID="nid1"
+export CHANNEL_NAME="{{data['network_name']}}-appchannel"
+export FABRIC_CFG_PATH="/etc/hyperledger/fabric"
+
+export CORE_PEER_LOCALMSPID="{{data['org_name']|capitalize}}MSP"
+export CORE_PEER_MSPCONFIGPATH="/fabric/crypto-config/peerOrganizations/{{data['org_name']}}.{{data['network_name']}}.com/users/Admin@{{data['org_name']}}.{{data['network_name']}}.com/msp"
+
+export CORE_PEER_ADDRESS="{{data['peer_host']}}:{{data['peer_port']}}"
+export CORE_PEER_TLS_ROOTCERT_FILE="/fabric/crypto-config/peerOrganizations/{{data['org_name']}}.{{data['network_name']}}.com/peers/peer{{data['peer_index']}}.{{data['org_name']}}.{{data['network_name']}}.com/tls/ca.crt"
+sleep $MAX_SLEEP
+
+joinChannelWithRetry
+echo "=== ${CORE_PEER_ADDRESS} joined channel '${CHANNEL_NAME}'===="
+echo
+
+exit 0
